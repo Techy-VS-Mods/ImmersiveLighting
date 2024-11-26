@@ -1,0 +1,15 @@
+{
+    "item-lamp-alcoholportion" : "Lamp Fuel",
+    "lamp-turn-up": "Turn Up",
+    "lamp-turn-down": "Turn Down",
+    "lamp-light": "Light",
+    "lamp-douse": "Douse",
+    "block-lamp-off": "Liquid Fuel Lamp",
+    "block-lamp-low": "Liquid Fuel Lamp",
+    "block-lamp-med": "Liquid Fuel Lamp",
+    "block-lamp-high": "Liquid Fuel Lamp",
+    "lamp-filled-fuel": "Filled with Combustible Fuel",
+    "lamp-filled": "Filled with Non-Combustible Liquid",
+    "introduction-title": "Immersive Lighting",
+    "introduction-text": "<strong>Immersive Lighting</strong><br><br>There are many kinds of lights in the world, torches, candles, lanterns.<br>Immersive Lighting attempts to add a few more which are a little more immersive.<br>The first is the <a href='handbook://block-immersivelighting:lamp-off'>Liquid Fuel Lamp</a> which can be fueled with Aqua Vitae or any other combustible liquid."
+}

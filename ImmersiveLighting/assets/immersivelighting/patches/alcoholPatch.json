@@ -1,0 +1,9 @@
+[{
+  "file": "game:itemtypes/liquid/alcohol",
+  "op": "add",
+  "path": "/combustibleProps",
+  "value": {
+    "burnTemperature": 700,
+    "burnDuration": 1
+  } 
+}]

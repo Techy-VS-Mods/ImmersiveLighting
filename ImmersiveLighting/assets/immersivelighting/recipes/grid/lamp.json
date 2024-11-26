@@ -1,0 +1,12 @@
+{
+  "ingredientPattern": "_G_,_C_,GFG",
+  "width": 3,
+  "height": 3,
+  "ingredients": {
+    "G" : { "type":  "block", "code": "game:glassslab-*-free"},
+    "C" : { "type":  "item", "code": "game:ingot-copper"},
+    "F" : { "type":  "item", "code": "game:flint"}
+  }, 
+  "output": { "type": "block", "code" : "immersivelighting:lamp-off" },
+  "quantity": 1
+}

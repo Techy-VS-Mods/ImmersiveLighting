@@ -1,0 +1,29 @@
+{
+	"credit": "Made with Blockbench",
+	"elements": [
+		{
+			"name": "resivoir",
+			"from": [6.175, 0.175, 6.175],
+			"to": [9.825, 1.65, 9.825],
+			"faces": {
+				"north": {"uv": [0, 0, 16, 16], "texture": "#missing"},
+				"east": {"uv": [0, 0, 16, 16], "texture": "#missing"},
+				"south": {"uv": [0, 0, 16, 16], "texture": "#missing"},
+				"west": {"uv": [0, 0, 16, 16], "texture": "#missing"},
+				"up": {"uv": [0, 0, 16, 16], "texture": "#missing"},
+				"down": {"uv": [0, 0, 16, 16], "texture": "#missing"}
+			},
+			"renderpass": 4
+		}
+	],
+	"textureWidth": 16,
+	"textureHeight": 16,
+	"textureSizes": {
+		"0": [32, 32],
+		"1": [32, 32],
+		"2": [32, 32],
+		"3": [32, 32],
+		"4": [32, 32]
+	},
+	"animations": []
+}

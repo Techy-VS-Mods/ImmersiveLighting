@@ -1,0 +1,13 @@
+{
+    "type": "code",
+    "modid": "immersivelighting",
+    "name": "ImmersiveLighting",
+    "authors": [
+        "Techy"
+    ],
+    "description": "An attempt to make more immersive lighting sources for Vintage Story. ",
+    "version": "1.0.0",
+    "dependencies": {
+        "game": "1.19.8"
+    }
+}

@@ -1,0 +1,198 @@
+{
+  "code": "lamp",
+  "class": "BlockLamp",
+  "entityClass": "BlockEntityLamp",
+  "creativeInventory": {
+    "general": [
+      "lamp-off"
+    ]
+  },
+  "variantgroups": [
+    {"code":  "state", "states": ["off", "low", "med", "high"] }
+  ],
+  "attributes": {
+    "canDrinkFrom": false,
+    "capacityLitres": 1,
+    "isTopOpened": true,
+    "handbook": {
+      "groupBy": [
+        "lamp-*"
+      ]
+    }
+  },
+  "shapebyType": {
+    "lamp-off" : {"base": "block/lamps/lamp"},
+    "lamp-*" : {"base": "block/lamps/lamp-lit"}
+  },
+  "textures": {
+    "0": {
+      "base": "game:block/metal/ingot/copper"
+    },
+    "1": {
+      "base": "game:block/metal/ingot/tinbronze"
+    },
+    "2": {
+      "base": "game:block/glass/smoky"
+    },
+    "3": {
+      "base": "game:block/glass/leaded-brown"
+    },
+    "4": {
+      "base": "game:item/medicine/linen/plain"
+    },
+    "6": {
+      "base": "game:entity/firefly"
+    }
+  },
+  "eplaceable": 5001,
+  "resistance": 10,
+  "lightAbsorption": 0,
+  "lightHsvbyType": {
+    "lamp-off": [
+      0,
+      0,
+      0
+    ],
+    "lamp-low": [
+      4,
+      5,
+      5
+    ],
+    "lamp-med": [
+      4,
+      5,
+      10
+    ],
+    "lamp-high": [
+      4,
+      5,
+      20
+    ]
+  },
+  "particlePropertiesbyType": {
+    "lamp-off": [],
+    "lamp-*": [
+      {
+        "__comment": "Fire quads",
+        "hsvaColor": [
+          {
+            "avg": 20,
+            "var": 20
+          },
+          {
+            "avg": 255,
+            "var": 50
+          },
+          {
+            "avg": 255,
+            "var": 50
+          },
+          {
+            "avg": 255,
+            "var": 0
+          }
+        ],
+        "opacityEvolve": {
+          "transform": "quadratic",
+          "factor": -16
+        },
+        "gravityEffect": {
+          "avg": 0,
+          "var": 0
+        },
+        "posOffsetByType": {
+          "lamp-*": [
+            {
+              "avg": -0.005,
+              "var": 0.002
+            },
+            {
+              "avg": -0.3,
+              "var": 0.0
+            },
+            {
+              "avg": -0.0,
+              "var": 0.003
+            }
+          ]
+        },
+        "velocity": [
+          {
+            "avg": 0,
+            "var": 0.0
+          },
+          {
+            "avg": 0.01,
+            "var": 0.02
+          },
+          {
+            "avg": 0,
+            "var": 0.0
+          }
+        ],
+        "quantity": {
+          "avg": 0.3
+        },
+        "size": {
+          "avg": 0.03,
+          "var": 0.03
+        },
+        "lifeLength": {
+          "avg": 0.35
+        },
+        "sizeEvolve": {
+          "transform": "linear",
+          "factor": 0.15
+        },
+        "particleModel": "Quad",
+        "vertexFlags": 128,
+        "windAffectednes": 0.0001
+      }
+    ]
+  },
+  "collisionbox": {
+    "x1": 0.375,
+    "y1": 0,
+    "z1": 0.375,
+    "x2": 0.625,
+    "y2": 0.5,
+    "z2": 0.625
+  },
+  "selectionBox": {
+    "x1": 0.375,
+    "y1": 0,
+    "z1": 0.375,
+    "x2": 0.625,
+    "y2": 0.5,
+    "z2": 0.625
+  },
+  "sounds": {
+    "place": "game:block/plank",
+    "break": "game:block/glass",
+    "hit": "game:block/glass"
+  },
+  "rainPermeable": true,
+  "materialDensity": 600,
+  "doNotRenderAtLod2": false,
+  "blockmaterial": "Glass",
+  "faceCullMode": "MergeMaterial",
+  "vertexFlags": {
+    "zOffset": 2,
+    "shiny": true
+  },
+  "sidesolid": {
+    "all": false
+  },
+  "sideopaque": {
+    "all": false
+  },
+  "guiTransform": {
+    "translation": { "x": 0, "y": -14, "z": 0 },
+    "scale": 2.5
+  },
+  "tpHandTransform": {
+    "translation": { "x": -0.9, "y": -0.54, "z": -0.55 },
+    "rotation": { "x": -53, "y": 3, "z": -94 },
+    "scale": 0.95
+  }
+}
