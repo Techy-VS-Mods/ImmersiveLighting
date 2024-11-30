@@ -3,7 +3,7 @@
   "op": "add",
   "path": "/combustibleProps",
   "value": {
-    "burnTemperature": 700,
+    "burnTemperature": 1200,
     "burnDuration": 1
   } 
 }]

@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using System.Reflection.Metadata;
+using System.Text;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
@@ -35,24 +37,6 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     private bool _meshChanged = true;
     private bool _lightChanged = true;
     
-    private BlockLampStates CurrentState
-    {
-        get
-        {
-            var parsed = BlockLampStates.TryParse(Block.Code.EndVariant(), out BlockLampStates state);
-            if (!parsed) Api.Logger.Warning("Failed to parse BlockEntityLamp current state. " + Block.Code.EndVariant());
-            return parsed ? state : BlockLampStates.off;
-        }
-    }
-    private BlockLampStates NewState { get {
-        var calculatedWickHeight = _wickHeight;
-        if (_remainingFuel < 0.15d) calculatedWickHeight = GameMath.Min(2, _wickHeight);
-        if (_remainingFuel < 0.5d) calculatedWickHeight = GameMath.Min(1, _wickHeight);
-        
-        return _lit ? (BlockLampStates)calculatedWickHeight : BlockLampStates.off;
-        
-    } }
-
     public BlockEntityLamp()
     {
         inventory = new InventoryGeneric(1, null, null, 
@@ -71,30 +55,31 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
 
         RegisterGameTickListener(OnGameTick, 500);
         
-        if (_ownBlock?.Attributes?["capacityLitres"].Exists == true)
-        {
-            CapacityLitres = _ownBlock.Attributes["capacityLitres"].AsInt(50);
-            ((ItemSlotLiquidOnly)inventory[0]).CapacityLitres = CapacityLitres;
-        }
-        if (_ownBlock?.Attributes?["filled"].Exists == true)
-        {
-            _ownBlock.Filled =  _ownBlock.Attributes["filled"].AsBool(false);
-        }
-        if (_ownBlock?.Attributes?["lit"].Exists == true)
-        {
-            _ownBlock.Lit = _lit = _ownBlock.Attributes["lit"].AsBool(false);
-        }
-        if (_ownBlock?.Attributes?["remainingFuel"].Exists == true)
-        {
-            _ownBlock.RemainingFuel = _remainingFuel = _ownBlock.Attributes["remainingFuel"].AsDouble(0.0d);
-        }
-        if (_ownBlock?.Attributes?["wickHeight"].Exists == true)
-        {
-            _ownBlock.WickHeight = _wickHeight = _ownBlock.Attributes["wickHeight"].AsInt(1);
-        }
+        // if (_ownBlock?.Attributes?["capacityLitres"].Exists == true)
+        // {
+        //     CapacityLitres = _ownBlock.Attributes["capacityLitres"].AsInt(50);
+        //     ((ItemSlotLiquidOnly)inventory[0]).CapacityLitres = CapacityLitres;
+        // }
+        // if (_ownBlock?.Attributes?["filled"].Exists == true)
+        // {
+        //     _ownBlock.Filled =  _ownBlock.Attributes["filled"].AsBool(false);
+        // }
+        // if (_ownBlock?.Attributes?["lit"].Exists == true)
+        // {
+        //     _ownBlock.Lit = _lit = _ownBlock.Attributes["lit"].AsBool(false);
+        // }
+        // if (_ownBlock?.Attributes?["remainingFuel"].Exists == true)
+        // {
+        //     _ownBlock.RemainingFuel = _remainingFuel = _ownBlock.Attributes["remainingFuel"].AsDouble(0.0d);
+        // }
+        // if (_ownBlock?.Attributes?["wickHeight"].Exists == true)
+        // {
+        //     _ownBlock.WickHeight = _wickHeight = _ownBlock.Attributes["wickHeight"].AsInt(1);
+        // }
+        
         if (Api?.Side == EnumAppSide.Client)
         {
-            _currentMesh = GenMesh();
+            // _currentMesh = GenMesh();
         }
         
         
@@ -107,18 +92,13 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
         return null;
     }
     
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="player"></param>
-    /// <returns>True if interaction handled otherwise false</returns>
     public bool OnPlayerInteract(IPlayer player)
     {
         if (!_interactCooldown && Api.Side == EnumAppSide.Server)
         {
             if (player.Entity.Controls.ShiftKey) return _interactCooldown = ChangeWickHeight(WickMotion.Up);
             if (player.Entity.Controls.CtrlKey) return _interactCooldown = ChangeWickHeight(WickMotion.Down);
-            if (player.Entity.RightHandItemSlot.Empty) return ToggleLightedState();
+            if (player.Entity.RightHandItemSlot.Empty) return _interactCooldown = ToggleLightedState();
             return false;
         }
         return false;
@@ -166,12 +146,30 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     {   
         _interactCooldown = false;
 
-        if (Api?.Side == EnumAppSide.Client && _meshChanged) _currentMesh = GenMesh();
-        UpdateBlockLight();
+        // if (Api?.Side == EnumAppSide.Client && _meshChanged) _currentMesh = GenMesh();
+        
+        if (Api?.Side == EnumAppSide.Client)
+        {
+            ClientTick(dt);
+            return;
+        }
 
-        if (Api?.Side != EnumAppSide.Server) return;
+        if (Api?.Side != EnumAppSide.Server)
+        {
+            ServerTick(dt);
+            return;
+        }
+    }
+
+    public void ClientTick(float dt)
+    {
         UpdateBlockLight();
-        UpdateFuel(dt);
+    }
+
+    public void ServerTick(float dt)
+    {
+        if (_lit) UpdateFuel(dt);
+        UpdateBlockLight(); // This may cause duplication but is required
     }
 
     public void UpdateFuel(float dt, bool force = false)
@@ -204,41 +202,56 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     {
         
         return (posY % GlobalConstants.ChunkSize * GlobalConstants.ChunkSize + posZ % GlobalConstants.ChunkSize) * GlobalConstants.ChunkSize + posX % GlobalConstants.ChunkSize;
-    } 
+    }
+
+    public override void OnBlockBroken(IPlayer byPlayer = null)
+    {
+        var ba = Api.World.GetBlockAccessor(true,true, true);
+        ba.RemoveBlockLight(Block.LightHsv, Pos);
+        ba.Commit();
+        base.OnBlockBroken(byPlayer);
+    }
+
     public void UpdateBlockLight()
     {
         
         // Todo instead of using variants try setting lighthsv here before exchanging block
         if (_lightChanged)
         {
-            // var  newBlock = (BlockLamp) Api.World.GetBlock(Block.CodeWithParts(NewState.ToString()));
-            var ba = Api.World.GetBlockAccessorMapChunkLoading(true, true);
+            var  newBlock = (BlockLamp) Api.World.GetBlock(Block.CodeWithParts("off"));
+            
+            var ba = Api.World.GetBlockAccessor(true,true, true);
             var chunk = ba.GetChunk(Pos.X / GlobalConstants.ChunkSize, Pos.InternalY / GlobalConstants.ChunkSize, Pos.Z / GlobalConstants.ChunkSize);
             var pos = new Vec2i(Pos.X / GlobalConstants.ChunkSize, Pos.Z / GlobalConstants.ChunkSize);
-            ba.SetChunks(pos, new[] {chunk});
+            // ba.SetChunks(pos, new[] {chunk});
+            ba.RemoveBlockLight(Block.LightHsv, Pos);
             var newLightHsv = UpdateLightHsv();
-            _ownBlock.Lit = _lit;
-            _ownBlock.HasFuel = _hasFuel;
-            _ownBlock.Filled = !inventory[0].Empty;
-            _ownBlock.RemainingFuel = _remainingFuel;
-            _ownBlock.WickHeight = _wickHeight;
-            _ownBlock.LightAbsorption = _lit ? 0 : 1;
-            _ownBlock.LightHsv = newLightHsv;
+            newBlock.Lit = _lit;
+            newBlock.HasFuel = _hasFuel;
+            newBlock.Filled = !inventory[0].Empty;
+            newBlock.RemainingFuel = _remainingFuel;
+            newBlock.WickHeight = _wickHeight;
+            newBlock.LightAbsorption = _lit ? 0 : 1;
+            newBlock.LightHsv = newLightHsv;
             var blockIndex3d = Index3D(Pos.X, Pos.Y, Pos.Z);
             // var accessor = ImmersiveLightingModSystem.CoreServerApi.World.GetBlockAccessorMapChunkLoading(true, true);
             
             // chunk.Lighting.ClearLight();
             
-            ba.ExchangeBlock(_ownBlock.BlockId, Pos);
-            
-            chunk.Lighting.SetBlocklight(blockIndex3d, newLightHsv[2]);
-            
+            // chunk.Lighting.ClearWithSunlight((ushort)chunk.Lighting.GetSunlight(blockIndex3d));
+            // ba.RemoveBlockLight(_ownBlock.LightHsv, Pos);
+            ba.SetBlock(newBlock.BlockId, Pos);
+            ba.MarkBlockModified(Pos);
+            // chunk.Lighting.SetBlocklight(blockIndex3d, newLightHsv[2]);
+            ba.MarkBlockModified(Pos);
+            chunk.MarkModified();
             ba.Commit();
+            
             // ba.GetChunk(Pos.X, Pos.Y, Pos.Z).Lighting.ClearLight();
-            _ownBlock = _ownBlock;
+            _ownBlock = newBlock;
             _meshChanged = false;
-            _lightChanged = false;
-            MarkDirty(true);
+             _lightChanged = false;
+            // MarkDirty(true);
         }
     }
     
@@ -265,15 +278,13 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     public override void ToTreeAttributes(ITreeAttribute tree)
     {
         base.ToTreeAttributes(tree);
-        if (Api?.Side == EnumAppSide.Server)
-        {
-             tree.SetBool("hasFuel", _hasFuel);
-             tree.SetBool("lit", _lit);
-             tree.SetBool("filled", !inventory[0].Empty);
-             tree.SetDouble("remainingFuel", _remainingFuel);
-             tree.SetDouble("wickHeight", _wickHeight);
-             tree.SetBool("lightChanged", _lightChanged);
-        }
+        var stuff = new StringBuilder().AppendLine("hasFuel " + _hasFuel).AppendLine("lit " + _lit).AppendLine("hasContents " + !inventory[0].Empty).AppendLine("remainingFuel " + _remainingFuel).AppendLine("wickHeight " + _wickHeight).AppendLine("lightChangeds " + _lightChanged);
+        tree.SetBool("hasFuel", _hasFuel);
+        tree.SetBool("lit", _lit);
+        tree.SetBool("filled", !inventory[0].Empty);
+        tree.SetDouble("remainingFuel", _remainingFuel);
+        tree.SetInt("wickHeight", _wickHeight);
+        tree.SetBool("lightChanged", _lightChanged);
     }
 
     private double CalculateRemainingFuel()
@@ -291,17 +302,16 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     public override void FromTreeAttributes(ITreeAttribute tree, IWorldAccessor worldForResolving)
     {
         base.FromTreeAttributes(tree, worldForResolving);
-        if (Api?.Side == EnumAppSide.Client)
-        {
-            ((BlockLamp)Block).HasFuel = _hasFuel = tree.GetBool("hasFuel");
-            ((BlockLamp)Block).Lit = _lit = tree.GetBool("lit");
-            ((BlockLamp)Block).Filled = tree.GetBool("filled");
-            ((BlockLamp)Block).RemainingFuel = _remainingFuel = tree.GetDouble("remainingFuel");
-            _lightChanged = tree.GetBool("lightChanged", true);
-            
-            _currentMesh = GenMesh();
-            MarkDirty(true);
-        }
+        var stuff = new StringBuilder().AppendLine("hasFuel " + _hasFuel).AppendLine("lit " + _lit).AppendLine("hasContents " + !inventory[0].Empty).AppendLine("remainingFuel " + _remainingFuel).AppendLine("wickHeight " + _wickHeight).AppendLine("lightChangeds " + _lightChanged);
+        ((BlockLamp)Block).HasFuel = _hasFuel = tree.GetBool("hasFuel");
+        ((BlockLamp)Block).Lit = _lit = tree.GetBool("lit");
+        ((BlockLamp)Block).Filled = tree.GetBool("filled");
+        ((BlockLamp)Block).RemainingFuel = _remainingFuel = tree.GetDouble("remainingFuel");
+        ((BlockLamp)Block).WickHeight = _wickHeight = tree.GetInt("wickHeight");
+        _lightChanged = tree.GetBool("lightChanged", true);
+        var stuff2 = new StringBuilder().AppendLine("hasFuel " + _hasFuel).AppendLine("lit " + _lit).AppendLine("hasContents " + !inventory[0].Empty).AppendLine("remainingFuel " + _remainingFuel).AppendLine("wickHeight " + _wickHeight).AppendLine("lightChangeds " + _lightChanged);
+        // _currentMesh = GenMesh();
+        MarkDirty(true);
         
     }
 
@@ -322,9 +332,9 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     internal MeshData GenMesh()
     {
         if (_ownBlock == null) return null;
-
+    
         MeshData mesh = _ownBlock.GenMesh(inventory[0].Itemstack, Pos);
-
+    
         if (mesh.CustomInts != null)
         {
             for (int i = 0; i < mesh.CustomInts.Count; i++)
@@ -334,7 +344,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
                 mesh.CustomInts.Values[i] |= 1 << 26; // Enabled weak foam
             }
         }
-
+    
         return mesh;
     }
     
