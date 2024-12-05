@@ -86,6 +86,7 @@ public class BlockLamp: BlockLiquidContainerBase
         info.AppendLine("remianingFuel " + RemainingFuel);
         info.AppendLine("wickheigh " + WickHeight);
         info.AppendLine("lightHSV " + LightHsv[0] + " " + LightHsv[1] + " " + LightHsv[2]);
+        info.AppendLine("Entity uniqueId" + ((BlockEntityLamp)world.BlockAccessor.GetBlockEntity(pos))?.UniqueId);
         return info.ToString();
     }
 

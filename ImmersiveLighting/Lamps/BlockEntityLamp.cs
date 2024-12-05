@@ -2,22 +2,16 @@ using System;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Text;
+using ImmersiveLighting.Helpers;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
+using Vintagestory.API.MathTools;
 
 namespace ImmersiveLighting.Lamps;
-
-public enum BlockLampStates
-{
-    off,
-    low,
-    med,
-    high
-}
 
 public class BlockEntityLamp : BlockEntityLiquidContainer
 {
@@ -36,6 +30,9 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     private double _remainingFuel = 0;
     private bool _meshChanged = true;
     private bool _lightChanged = true;
+    private const int MAX_WICK = 3;
+    public string UniqueId;
+    
     
     public BlockEntityLamp()
     {
@@ -51,9 +48,11 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     {
         base.Initialize(api);
 
+        UniqueId = Pos.ToString();
         _ownBlock = Block as BlockLamp;
 
         RegisterGameTickListener(OnGameTick, 500);
+        ImmersiveLightingModSystem.RegisterEntity(UniqueId);
         
         // if (_ownBlock?.Attributes?["capacityLitres"].Exists == true)
         // {
@@ -79,7 +78,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
         
         if (Api?.Side == EnumAppSide.Client)
         {
-            // _currentMesh = GenMesh();
+            _currentMesh = GenMesh();
         }
         
         
@@ -128,7 +127,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     {
         var oldHeight = _wickHeight;
         _wickHeight += (int)motion;
-        if (_wickHeight is > 3 or <= 0)
+        if (_wickHeight is > MAX_WICK or <= 0)
         {
             _wickHeight = oldHeight;
             Api.Logger.Notification("Wick RESET to " + _wickHeight);
@@ -146,7 +145,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     {   
         _interactCooldown = false;
 
-        // if (Api?.Side == EnumAppSide.Client && _meshChanged) _currentMesh = GenMesh();
+        if (Api?.Side == EnumAppSide.Client && _meshChanged) _currentMesh = GenMesh();
         
         if (Api?.Side == EnumAppSide.Client)
         {
@@ -218,12 +217,11 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
         // Todo instead of using variants try setting lighthsv here before exchanging block
         if (_lightChanged)
         {
-            var  newBlock = (BlockLamp) Api.World.GetBlock(Block.CodeWithParts("off"));
+            var newBlock = _ownBlock;//(BlockLamp)Api.World.GetBlock(Block.Code);
             
             var ba = Api.World.GetBlockAccessor(true,true, true);
             var chunk = ba.GetChunk(Pos.X / GlobalConstants.ChunkSize, Pos.InternalY / GlobalConstants.ChunkSize, Pos.Z / GlobalConstants.ChunkSize);
             var pos = new Vec2i(Pos.X / GlobalConstants.ChunkSize, Pos.Z / GlobalConstants.ChunkSize);
-            // ba.SetChunks(pos, new[] {chunk});
             ba.RemoveBlockLight(Block.LightHsv, Pos);
             var newLightHsv = UpdateLightHsv();
             newBlock.Lit = _lit;
@@ -231,28 +229,72 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
             newBlock.Filled = !inventory[0].Empty;
             newBlock.RemainingFuel = _remainingFuel;
             newBlock.WickHeight = _wickHeight;
-            newBlock.LightAbsorption = _lit ? 0 : 1;
-            newBlock.LightHsv = newLightHsv;
-            var blockIndex3d = Index3D(Pos.X, Pos.Y, Pos.Z);
-            // var accessor = ImmersiveLightingModSystem.CoreServerApi.World.GetBlockAccessorMapChunkLoading(true, true);
+            newBlock.LightHsv = CalculatelightHSVSafe(newLightHsv);
+            newBlock.LightAbsorption = 1;
             
-            // chunk.Lighting.ClearLight();
             
-            // chunk.Lighting.ClearWithSunlight((ushort)chunk.Lighting.GetSunlight(blockIndex3d));
-            // ba.RemoveBlockLight(_ownBlock.LightHsv, Pos);
-            ba.SetBlock(newBlock.BlockId, Pos);
+            //rgba works
+            // or should I say bgra or argb
+            newBlock.ParticleProperties = !_lit
+                ? Array.Empty<AdvancedParticleProperties>()
+                : new[]
+                {
+                    new AdvancedParticleProperties()
+                    {
+                        // Fire Quads
+                        HsvaColor = new[]
+                        {
+                            NatFloat.createUniform(newLightHsv[0],0),
+                            NatFloat.createUniform(newLightHsv[1], 0),
+                            NatFloat.createUniform(newLightHsv[2], 0),
+                            NatFloat.createUniform(225, 0)
+                        },
+                        OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.QUADRATIC, -16),
+                        GravityEffect = NatFloat.Zero,
+                        PosOffset = new[]
+                        {
+                            NatFloat.createUniform(-0.005f, 0.002f),
+                            NatFloat.createUniform(-.3f, 0f),
+                            NatFloat.createUniform(-0.01f, 0.02f)
+                        },
+                        Velocity = new[]
+                        {
+                            NatFloat.createUniform(0f, 0f),
+                            NatFloat.createUniform(0.01f, 0.02f),
+                            NatFloat.createUniform(0f, 0f)
+                        },
+                        Quantity = NatFloat.createUniform(1.03f, 0.01f),
+                        Size = NatFloat.createUniform(0.03f, 0.03f),
+                        LifeLength = NatFloat.createUniform(0.3f, 0.1f),
+                        SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.15f),
+                        ParticleModel = EnumParticleModel.Quad,
+                        VertexFlags = 128,
+                        WindAffectednes = 0
+                    }
+                };
+            ba.ExchangeBlock(newBlock.BlockId, Pos);
             ba.MarkBlockModified(Pos);
-            // chunk.Lighting.SetBlocklight(blockIndex3d, newLightHsv[2]);
-            ba.MarkBlockModified(Pos);
-            chunk.MarkModified();
+            // ba.MarkBlockModified(Pos);
+            // chunk.MarkModified();
             ba.Commit();
             
-            // ba.GetChunk(Pos.X, Pos.Y, Pos.Z).Lighting.ClearLight();
-            _ownBlock = newBlock;
-            _meshChanged = false;
-             _lightChanged = false;
-            // MarkDirty(true);
+            //                     int HSVbitflag = (ColorUtil.Rgb2Hsv((float) color1[0], (float) color1[1], (float) color1[2]) | -16777216) >> 8;
+            //                      int rgbBitFlag = ColorUtil.Hsv2Rgb((num1 & 65280) S+ ((num1 & (int) byte.MaxValue) << 16) + (num1 >> 16 & (int) byte.MaxValue));
+;            _ownBlock = newBlock;
+            _meshChanged = true;
+            _lightChanged = false;
         }
+    }
+
+
+    public byte[] CalculatelightHSVSafe(byte[] lightHsvUnsafe)
+    {
+        byte[] lightHsvSafe = {0,0,0};
+        lightHsvSafe[0] = (byte)(63 * (lightHsvUnsafe[0] / 255d));
+        lightHsvSafe[1] = (byte)(7 * (lightHsvUnsafe[1] / 255d));
+        lightHsvSafe[2] = (byte)(31 * (lightHsvUnsafe[2] / 255d));
+        Api.Logger.Notification("Calculating lights safe. From " + lightHsvUnsafe[0] + ", " + lightHsvUnsafe[1] + ", " + lightHsvUnsafe[2] + " to " + lightHsvSafe[0] + ", " + lightHsvSafe[1] + ", " + lightHsvSafe[2]);
+        return lightHsvSafe;
     }
     
     private byte[] UpdateLightHsv()
@@ -261,13 +303,20 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
 
         if (!inventory[0].Empty)
         {
-            // ReSharper disable once PossibleLossOfFraction
-            var colortemp = (byte)GameMath.Clamp(Math.Round((double)inventory[0].Itemstack.Item.CombustibleProps.BurnTemperature / 100), 3, 11);
-            // 4-10
-        
             if (_lit)
             {
-                lightHsv = new byte[] { colortemp, 5, (byte)(5 * _wickHeight + 1) };
+                // var color = ColorCalculators.GetRGBFromCelsius((double)inventory[0].Itemstack.Item.CombustibleProps.BurnTemperature);
+                // var hsv = ColorUtil.RgbToHsvInts(color[0], color[1], color[2]).Select(x => (byte)x).ToArray();
+                // hsv[2] = (byte)((int)hsv[2] > 255 ? 255 : hsv[2]);
+                // //hsv[2] = (byte) (( ((255 / hsv[2]) / MAX_WICK) * _wickHeight) * 100);
+                // hsv[2] = (byte) (hsv[2] * (_wickHeight / MAX_WICK));
+                var mat = MaterialRepository.MaterialDatabase()[
+                    new Random().Next(0, MaterialRepository.MaterialDatabase().Count - 1)];
+                lightHsv = FlameColorCalculatorMaterial.GetFlameColor(mat.Name, new CombustionContext(){ HighOxygen = false, LargeFlame = false});
+                // lightHsv = FlameColorCalculatorTemp.CalculateFlameHSV(1200, "isopropyl_alcohol", false);
+                lightHsv[2] = (byte)Math.Round(lightHsv[2] * ((double)_wickHeight / MAX_WICK));
+                //lightHsv = FlameColorCalculator.GetFlameColorFromTemperature(inventory[0].Itemstack.Item.CombustibleProps.BurnTemperature);
+                //lightHsv = new byte[] { colortemp, 5, (byte)(5 * _wickHeight + 1) };
             }    
         }
 
@@ -279,12 +328,12 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     {
         base.ToTreeAttributes(tree);
         var stuff = new StringBuilder().AppendLine("hasFuel " + _hasFuel).AppendLine("lit " + _lit).AppendLine("hasContents " + !inventory[0].Empty).AppendLine("remainingFuel " + _remainingFuel).AppendLine("wickHeight " + _wickHeight).AppendLine("lightChangeds " + _lightChanged);
-        tree.SetBool("hasFuel", _hasFuel);
-        tree.SetBool("lit", _lit);
-        tree.SetBool("filled", !inventory[0].Empty);
-        tree.SetDouble("remainingFuel", _remainingFuel);
-        tree.SetInt("wickHeight", _wickHeight);
-        tree.SetBool("lightChanged", _lightChanged);
+        tree.SetBool("hasFuel" + UniqueId, _hasFuel);
+        tree.SetBool("lit" + UniqueId, _lit);
+        tree.SetBool("filled" + UniqueId, !inventory[0].Empty);
+        tree.SetDouble("remainingFuel" + UniqueId, _remainingFuel);
+        tree.SetInt("wickHeight" + UniqueId, _wickHeight);
+        tree.SetBool("lightChanged" + UniqueId, _lightChanged);
     }
 
     private double CalculateRemainingFuel()
@@ -302,15 +351,15 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     public override void FromTreeAttributes(ITreeAttribute tree, IWorldAccessor worldForResolving)
     {
         base.FromTreeAttributes(tree, worldForResolving);
-        var stuff = new StringBuilder().AppendLine("hasFuel " + _hasFuel).AppendLine("lit " + _lit).AppendLine("hasContents " + !inventory[0].Empty).AppendLine("remainingFuel " + _remainingFuel).AppendLine("wickHeight " + _wickHeight).AppendLine("lightChangeds " + _lightChanged);
-        ((BlockLamp)Block).HasFuel = _hasFuel = tree.GetBool("hasFuel");
-        ((BlockLamp)Block).Lit = _lit = tree.GetBool("lit");
-        ((BlockLamp)Block).Filled = tree.GetBool("filled");
-        ((BlockLamp)Block).RemainingFuel = _remainingFuel = tree.GetDouble("remainingFuel");
-        ((BlockLamp)Block).WickHeight = _wickHeight = tree.GetInt("wickHeight");
-        _lightChanged = tree.GetBool("lightChanged", true);
-        var stuff2 = new StringBuilder().AppendLine("hasFuel " + _hasFuel).AppendLine("lit " + _lit).AppendLine("hasContents " + !inventory[0].Empty).AppendLine("remainingFuel " + _remainingFuel).AppendLine("wickHeight " + _wickHeight).AppendLine("lightChangeds " + _lightChanged);
-        // _currentMesh = GenMesh();
+        // var stuff = new StringBuilder().AppendLine("hasFuel " + _hasFuel).AppendLine("lit " + _lit).AppendLine("hasContents " + !inventory[0].Empty).AppendLine("remainingFuel " + _remainingFuel).AppendLine("wickHeight " + _wickHeight).AppendLine("lightChangeds " + _lightChanged);
+        ((BlockLamp)Block).HasFuel = _hasFuel = tree.GetBool("hasFuel" + UniqueId);
+        ((BlockLamp)Block).Lit = _lit = tree.GetBool("lit" + UniqueId);
+        ((BlockLamp)Block).Filled = tree.GetBool("filled" + UniqueId);
+        ((BlockLamp)Block).RemainingFuel = _remainingFuel = tree.GetDouble("remainingFuel" + UniqueId);
+        ((BlockLamp)Block).WickHeight = _wickHeight = tree.GetInt("wickHeight" + UniqueId);
+        _lightChanged = tree.GetBool("lightChanged" + UniqueId, true);
+        // var stuff2 = new StringBuilder().AppendLine("hasFuel " + _hasFuel).AppendLine("lit " + _lit).AppendLine("hasContents " + !inventory[0].Empty).AppendLine("remainingFuel " + _remainingFuel).AppendLine("wickHeight " + _wickHeight).AppendLine("lightChangeds " + _lightChanged);
+        _currentMesh = GenMesh();
         MarkDirty(true);
         
     }

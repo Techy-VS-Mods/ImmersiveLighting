@@ -7,6 +7,6 @@
     "C" : { "type":  "item", "code": "game:ingot-copper"},
     "F" : { "type":  "item", "code": "game:flint"}
   }, 
-  "output": { "type": "block", "code" : "immersivelighting:lamp-off" },
+  "output": { "type": "block", "code" : "immersivelighting:lamp" },
   "quantity": 1
 }

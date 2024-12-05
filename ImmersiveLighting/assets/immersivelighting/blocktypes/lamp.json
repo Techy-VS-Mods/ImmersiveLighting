@@ -1,29 +1,23 @@
 {
-  "code": "lamp",
+  code: "lamp",
   "class": "BlockLamp",
   "entityClass": "BlockEntityLamp",
   "creativeInventory": {
     "general": [
-      "lamp-off"
+      "lamp"
     ]
   },
-  "variantgroups": [
-    {"code":  "state", "states": ["off", "low", "med", "high"] }
-  ],
   "attributes": {
     "canDrinkFrom": false,
     "capacityLitres": 1,
     "isTopOpened": true,
     "handbook": {
       "groupBy": [
-        "lamp-*"
+        "lamp"
       ]
     }
   },
-  "shapebyType": {
-    "lamp-off" : {"base": "block/lamps/lamp"},
-    "lamp-*" : {"base": "block/lamps/lamp-lit"}
-  },
+  "shape": {"base": "block/lamps/lamp"},
   "textures": {
     "0": {
       "base": "game:block/metal/ingot/copper"
@@ -46,87 +40,6 @@
   },
   "eplaceable": 5001,
   "resistance": 10,
-  "particlePropertiesbyType": {
-    "lamp-off": [],
-    "lamp-*": [
-      {
-        "__comment": "Fire quads",
-        "hsvaColor": [
-          {
-            "avg": 20,
-            "var": 20
-          },
-          {
-            "avg": 255,
-            "var": 50
-          },
-          {
-            "avg": 255,
-            "var": 50
-          },
-          {
-            "avg": 255,
-            "var": 0
-          }
-        ],
-        "opacityEvolve": {
-          "transform": "quadratic",
-          "factor": -16
-        },
-        "gravityEffect": {
-          "avg": 0,
-          "var": 0
-        },
-        "posOffsetByType": {
-          "lamp-*": [
-            {
-              "avg": -0.005,
-              "var": 0.002
-            },
-            {
-              "avg": -0.3,
-              "var": 0.0
-            },
-            {
-              "avg": -0.0,
-              "var": 0.003
-            }
-          ]
-        },
-        "velocity": [
-          {
-            "avg": 0,
-            "var": 0.0
-          },
-          {
-            "avg": 0.01,
-            "var": 0.02
-          },
-          {
-            "avg": 0,
-            "var": 0.0
-          }
-        ],
-        "quantity": {
-          "avg": 0.3
-        },
-        "size": {
-          "avg": 0.03,
-          "var": 0.03
-        },
-        "lifeLength": {
-          "avg": 0.35
-        },
-        "sizeEvolve": {
-          "transform": "linear",
-          "factor": 0.15
-        },
-        "particleModel": "Quad",
-        "vertexFlags": 128,
-        "windAffectednes": 0.0001
-      }
-    ]
-  },
   "collisionbox": {
     "x1": 0.375,
     "y1": 0,
