@@ -5,11 +5,13 @@ using System.Text;
 using ImmersiveLighting.Helpers;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
+using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 using Vintagestory.API.MathTools;
+
 
 namespace ImmersiveLighting.Lamps;
 
@@ -32,7 +34,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     private bool _lightChanged = true;
     private const int MAX_WICK = 3;
     public string UniqueId;
-    
+    private byte[] currentLightHsv = { 0, 0, 0 };
     
     public BlockEntityLamp()
     {
@@ -42,7 +44,6 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
         inventory.SlotModified += Inventory_SlotModified;
         inventory.BaseWeight = 1;
     }
-    
     
     public override void Initialize(ICoreAPI api)
     {
@@ -143,6 +144,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     
     public void OnGameTick(float dt)
     {   
+        BlockLantern
         _interactCooldown = false;
 
         if (Api?.Side == EnumAppSide.Client && _meshChanged) _currentMesh = GenMesh();
@@ -211,6 +213,18 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
         base.OnBlockBroken(byPlayer);
     }
 
+    public byte[] GetLightHsv()
+    {
+        var ba = Api.World.GetBlockAccessor(true,true, true);
+        if (currentLightHsv is not null && ba is not null)
+        {
+            // ba.RemoveBlockLight(currentLightHsv, Pos);
+            ba.MarkBlockDirty(Pos); 
+            ba.Commit();    
+        }
+        return UpdateLightHsv(); //CalculatelightHSVSafe(UpdateLightHsv());
+    }
+
     public void UpdateBlockLight()
     {
         
@@ -221,16 +235,16 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
             
             var ba = Api.World.GetBlockAccessor(true,true, true);
             var chunk = ba.GetChunk(Pos.X / GlobalConstants.ChunkSize, Pos.InternalY / GlobalConstants.ChunkSize, Pos.Z / GlobalConstants.ChunkSize);
-            var pos = new Vec2i(Pos.X / GlobalConstants.ChunkSize, Pos.Z / GlobalConstants.ChunkSize);
-            ba.RemoveBlockLight(Block.LightHsv, Pos);
+            // var pos = new Vec2i(Pos.X / GlobalConstants.ChunkSize, Pos.Z / GlobalConstants.ChunkSize);
+            // ba.RemoveBlockLight(Block.LightHsv, Pos);
             var newLightHsv = UpdateLightHsv();
-            newBlock.Lit = _lit;
-            newBlock.HasFuel = _hasFuel;
-            newBlock.Filled = !inventory[0].Empty;
-            newBlock.RemainingFuel = _remainingFuel;
-            newBlock.WickHeight = _wickHeight;
-            newBlock.LightHsv = CalculatelightHSVSafe(newLightHsv);
-            newBlock.LightAbsorption = 1;
+            // newBlock.Lit = _lit;
+            // newBlock.HasFuel = _hasFuel;
+            // newBlock.Filled = !inventory[0].Empty;
+            // newBlock.RemainingFuel = _remainingFuel;
+            // newBlock.WickHeight = _wickHeight;
+            // newBlock.LightHsv = CalculatelightHSVSafe(newLightHsv);
+            // newBlock.LightAbsorption = 1;
             
             
             //rgba works
@@ -272,6 +286,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
                         WindAffectednes = 0
                     }
                 };
+            
             ba.ExchangeBlock(newBlock.BlockId, Pos);
             ba.MarkBlockModified(Pos);
             // ba.MarkBlockModified(Pos);
@@ -320,7 +335,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
             }    
         }
 
-        return lightHsv;
+        return currentLightHsv = lightHsv;
     }
     
     

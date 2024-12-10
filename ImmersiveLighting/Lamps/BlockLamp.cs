@@ -8,6 +8,7 @@ using System.Text;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.Util;
+using Vintagestory.Common;
 
 namespace ImmersiveLighting.Lamps;
 
@@ -56,6 +57,17 @@ public class BlockLamp: BlockLiquidContainerBase
                 MouseButton = EnumMouseButton.Right,
                 ShouldApply = ((wi, blockSelection, entitySelection) => !Lit)
             });
+    }
+
+    public override byte[] GetLightHsv(IBlockAccessor blockAccessor, BlockPos pos, ItemStack stack = null)
+    {
+        if (pos != (BlockPos)null)
+        {
+            var be = blockAccessor.GetBlockEntity<BlockEntityLamp>(pos);
+            if (be is not null) 
+                return be.GetLightHsv();   
+        }
+        return base.GetLightHsv(blockAccessor, pos, stack);
     }
 
     public override bool OnBlockInteractStart(IWorldAccessor world, IPlayer byPlayer, BlockSelection blockSel)
