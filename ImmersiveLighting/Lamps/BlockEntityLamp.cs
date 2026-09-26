@@ -85,6 +85,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
         _ownBlock = Block as BlockLamp;
 
         RegisterGameTickListener(OnGameTick, 500);
+        if (api.Side == EnumAppSide.Client) RegisterGameTickListener(SpawnSmoke, 250);
         
         if (_ownBlock?.Attributes?["capacityLitres"].Exists == true)
         {
@@ -149,13 +150,46 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     /// </summary>
     private byte[] ComputeHsv()
     {
-        switch ((int)NewState)
+        int wick = (int)NewState;
+        if (wick <= 0) return new byte[] { 0, 0, 0 };
+
+        // Colour comes from what is burning; brightness is the wick's base level scaled by how luminous the flame is
+        // (soot glows: clean spirit flames are dim, oils bright) and reduced by the smoke that escapes instead of glowing.
+        var fuel = FuelProfile.For(inventory[0].Itemstack);
+        float scale = _ownBlock?.Attributes?["brightnessScale"].AsFloat(1f) ?? 1f;
+        float v = BaseBrightness[wick - 1] * fuel.Luminosity * scale * (1f - 0.5f * fuel.EffectiveSmoke(wick));
+        return new byte[] { fuel.Hue, fuel.Sat, (byte)GameMath.Clamp((int)Math.Round(v), 1, 32) };
+    }
+
+    private static readonly int[] BaseBrightness = { 5, 10, 20 };
+
+    private SimpleParticleProperties _smokeProps;
+
+    /// <summary>Client only: soot rising from the flame. Purely visual; density follows the fuel's smoke value and the wick height.</summary>
+    private void SpawnSmoke(float dt)
+    {
+        if (Api?.Side != EnumAppSide.Client || !_lit || inventory[0].Empty) return;
+        float scale = ImmersiveLightingConfig.Current.SmokeScale;
+        int wick = (int)NewState;
+        if (scale <= 0f || wick <= 0) return;
+
+        float smoke = FuelProfile.For(inventory[0].Itemstack).EffectiveSmoke(wick) * scale;
+        if (smoke < 0.02f) return;
+
+        _smokeProps ??= new SimpleParticleProperties(0, 1, ColorUtil.ToRgba(140, 70, 70, 70), new Vec3d(), new Vec3d(),
+            new Vec3f(-0.01f, 0.10f, -0.01f), new Vec3f(0.01f, 0.16f, 0.01f), 2.2f, -0.02f, 0.10f, 0.22f, EnumParticleModel.Quad)
         {
-            case 1: return new byte[] { 4, 5, 5 };
-            case 2: return new byte[] { 4, 5, 10 };
-            case 3: return new byte[] { 4, 5, 20 };
-            default: return new byte[] { 0, 0, 0 };
-        }
+            OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, -140),
+            SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.5f),
+            WindAffected = true,
+            ParticleModel = EnumParticleModel.Quad
+        };
+        _smokeProps.MinPos = new Vec3d(Pos.X + 0.42, Pos.Y + 0.85, Pos.Z + 0.42);
+        _smokeProps.AddPos = new Vec3d(0.16, 0.05, 0.16);
+        _smokeProps.MinQuantity = 0;
+        _smokeProps.AddQuantity = Math.Max(0.4f, smoke * 3f);
+        _smokeProps.Color = ColorUtil.ToRgba((int)GameMath.Clamp(70 + 170 * smoke, 70, 220), 70, 70, 70);
+        Api.World.SpawnParticles(_smokeProps);
     }
 
     /// <summary>

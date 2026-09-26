@@ -1,5 +1,5 @@
 ## Immersive Lighting Mod
-#### Version 1.1.0
+#### Version 1.2.0
 
 ## Description
 An attempt to make more immersive lighting sources for Vintage Story. 
@@ -23,6 +23,12 @@ wick 3 burns three times faster. Thin, volatile spirits burn quickest; thicker o
 | Linseed (flax) and seed/nut oils: sunflower, peanut, soy, rice, seed | ~113 min | 850 |
 | Olive oil, avocado oil, engkala oil | ~125 min | 900 |
 | Ghee (Dairy Plus), liquid lard (Expanded Foods) | ~150 min | 750-800 |
+
+#### Flame colour, brightness and smoke
+Each fuel has its own flame colour, luminosity and smoke (`attributes.immersivelighting` on the fuel item, added by the patches).
+Clean spirits burn a dim, pale blue; oils and fats burn brighter and yellower but smoke more, and a smokier flame loses some light.
+Turning the wick up increases smoke. Tune brightness globally with `brightnessScale` in the lamp block's attributes, and turn lamp
+smoke down or off with `SmokeScale` in `ModConfig/immersivelighting.json`.
 
 Compatibility patches are per mod and only apply when that mod is installed (`dependsOn`), so nothing warns when a mod is absent:
 base game, Expanded Foods, Dairy Plus and Biodiversity (orchard and crops).

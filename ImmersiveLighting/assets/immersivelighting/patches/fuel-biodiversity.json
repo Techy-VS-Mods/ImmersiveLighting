@@ -5,24 +5,111 @@
     "op": "add",
     "path": "/combustiblePropsByType",
     "value": {
-      "*-avocado": { "burnTemperature": 900, "burnDuration": 2.5 },
-      "*-engkala": { "burnTemperature": 900, "burnDuration": 2.5 }
+      "*-avocado": {
+        "burnTemperature": 900,
+        "burnDuration": 2.5
+      },
+      "*-engkala": {
+        "burnTemperature": 900,
+        "burnDuration": 2.5
+      }
     },
-    "dependsOn": [ { "modid": "bdorchard" } ]
+    "dependsOn": [
+      {
+        "modid": "bdorchard"
+      }
+    ]
   },
   {
     "comment": "Fruit and potato spirits.",
     "file": "bdorchard:itemtypes/liquid/spirit",
     "op": "add",
     "path": "/combustibleProps",
-    "value": { "burnTemperature": 1000, "burnDuration": 1 },
-    "dependsOn": [ { "modid": "bdorchard" } ]
+    "value": {
+      "burnTemperature": 1000,
+      "burnDuration": 1
+    },
+    "dependsOn": [
+      {
+        "modid": "bdorchard"
+      }
+    ]
   },
   {
     "file": "bdcrop:itemtypes/liquid/spirit",
     "op": "add",
     "path": "/combustibleProps",
-    "value": { "burnTemperature": 1000, "burnDuration": 1 },
-    "dependsOn": [ { "modid": "bdcrop" } ]
+    "value": {
+      "burnTemperature": 1000,
+      "burnDuration": 1
+    },
+    "dependsOn": [
+      {
+        "modid": "bdcrop"
+      }
+    ]
+  },
+  {
+    "comment": "Avocado and engkala oil: fine oils, like olive.",
+    "file": "bdorchard:itemtypes/liquid/oilportion",
+    "op": "add",
+    "path": "/attributesByType",
+    "value": {
+      "*-avocado": {
+        "immersivelighting": {
+          "flameHue": 7,
+          "flameSat": 6,
+          "luminosity": 0.95,
+          "smoke": 0.15
+        }
+      },
+      "*-engkala": {
+        "immersivelighting": {
+          "flameHue": 7,
+          "flameSat": 6,
+          "luminosity": 0.95,
+          "smoke": 0.15
+        }
+      }
+    },
+    "dependsOn": [
+      {
+        "modid": "bdorchard"
+      }
+    ]
+  },
+  {
+    "comment": "Fruit spirits: near white.",
+    "file": "bdorchard:itemtypes/liquid/spirit",
+    "op": "add",
+    "path": "/attributes/immersivelighting",
+    "value": {
+      "flameHue": 9,
+      "flameSat": 1,
+      "luminosity": 0.5,
+      "smoke": 0.03
+    },
+    "dependsOn": [
+      {
+        "modid": "bdorchard"
+      }
+    ]
+  },
+  {
+    "comment": "Potato spirit: near white.",
+    "file": "bdcrop:itemtypes/liquid/spirit",
+    "op": "add",
+    "path": "/attributes/immersivelighting",
+    "value": {
+      "flameHue": 9,
+      "flameSat": 1,
+      "luminosity": 0.5,
+      "smoke": 0.03
+    },
+    "dependsOn": [
+      {
+        "modid": "bdcrop"
+      }
+    ]
   }
 ]

@@ -4,7 +4,31 @@
     "file": "dairyplus:itemtypes/liquid/ghee",
     "op": "add",
     "path": "/combustibleProps",
-    "value": { "burnTemperature": 800, "burnDuration": 3 },
-    "dependsOn": [ { "modid": "dairyplus" } ]
+    "value": {
+      "burnTemperature": 800,
+      "burnDuration": 3
+    },
+    "dependsOn": [
+      {
+        "modid": "dairyplus"
+      }
+    ]
+  },
+  {
+    "comment": "Ghee: warm yellow flame, moderate smoke.",
+    "file": "dairyplus:itemtypes/liquid/ghee",
+    "op": "add",
+    "path": "/attributes/immersivelighting",
+    "value": {
+      "flameHue": 7,
+      "flameSat": 5,
+      "luminosity": 0.9,
+      "smoke": 0.3
+    },
+    "dependsOn": [
+      {
+        "modid": "dairyplus"
+      }
+    ]
   }
 ]

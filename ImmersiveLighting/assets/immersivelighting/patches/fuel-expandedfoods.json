@@ -5,37 +5,203 @@
     "op": "add",
     "path": "/combustiblePropsByType",
     "value": {
-      "*-olive":     { "burnTemperature": 900, "burnDuration": 2.5 },
-      "*-flax":      { "burnTemperature": 850, "burnDuration": 2.25 },
-      "*-sunflower": { "burnTemperature": 850, "burnDuration": 2.25 },
-      "*-peanut":    { "burnTemperature": 850, "burnDuration": 2.25 },
-      "*-soy":       { "burnTemperature": 850, "burnDuration": 2.25 },
-      "*-rice":      { "burnTemperature": 850, "burnDuration": 2.25 },
-      "*-seed":      { "burnTemperature": 850, "burnDuration": 2.25 }
+      "*-olive": {
+        "burnTemperature": 900,
+        "burnDuration": 2.5
+      },
+      "*-flax": {
+        "burnTemperature": 850,
+        "burnDuration": 2.25
+      },
+      "*-sunflower": {
+        "burnTemperature": 850,
+        "burnDuration": 2.25
+      },
+      "*-peanut": {
+        "burnTemperature": 850,
+        "burnDuration": 2.25
+      },
+      "*-soy": {
+        "burnTemperature": 850,
+        "burnDuration": 2.25
+      },
+      "*-rice": {
+        "burnTemperature": 850,
+        "burnDuration": 2.25
+      },
+      "*-seed": {
+        "burnTemperature": 850,
+        "burnDuration": 2.25
+      }
     },
-    "dependsOn": [ { "modid": "expandedfoods" } ]
+    "dependsOn": [
+      {
+        "modid": "expandedfoods"
+      }
+    ]
   },
   {
     "comment": "Liquid lard: thick, cool, smoky flame; burns 3x as long as aqua vitae.",
     "file": "expandedfoods:itemtypes/liquid/lard",
     "op": "add",
     "path": "/combustibleProps",
-    "value": { "burnTemperature": 750, "burnDuration": 3 },
-    "dependsOn": [ { "modid": "expandedfoods" } ]
+    "value": {
+      "burnTemperature": 750,
+      "burnDuration": 3
+    },
+    "dependsOn": [
+      {
+        "modid": "expandedfoods"
+      }
+    ]
   },
   {
     "comment": "Distilled spirits: the strongest burn hottest. Same draw as aqua vitae.",
     "file": "expandedfoods:itemtypes/liquid/strongspiritportion",
     "op": "add",
     "path": "/combustibleProps",
-    "value": { "burnTemperature": 1050, "burnDuration": 1 },
-    "dependsOn": [ { "modid": "expandedfoods" } ]
+    "value": {
+      "burnTemperature": 1050,
+      "burnDuration": 1
+    },
+    "dependsOn": [
+      {
+        "modid": "expandedfoods"
+      }
+    ]
   },
   {
     "file": "expandedfoods:itemtypes/liquid/potentspiritportion",
     "op": "add",
     "path": "/combustibleProps",
-    "value": { "burnTemperature": 1100, "burnDuration": 1 },
-    "dependsOn": [ { "modid": "expandedfoods" } ]
+    "value": {
+      "burnTemperature": 1100,
+      "burnDuration": 1
+    },
+    "dependsOn": [
+      {
+        "modid": "expandedfoods"
+      }
+    ]
+  },
+  {
+    "comment": "Cooking oil flames.",
+    "file": "expandedfoods:itemtypes/liquid/foodoil",
+    "op": "add",
+    "path": "/attributesByType",
+    "value": {
+      "*-olive": {
+        "immersivelighting": {
+          "flameHue": 7,
+          "flameSat": 6,
+          "luminosity": 0.95,
+          "smoke": 0.15
+        }
+      },
+      "*-flax": {
+        "immersivelighting": {
+          "flameHue": 5,
+          "flameSat": 7,
+          "luminosity": 0.85,
+          "smoke": 0.4
+        }
+      },
+      "*-sunflower": {
+        "immersivelighting": {
+          "flameHue": 6,
+          "flameSat": 6,
+          "luminosity": 0.9,
+          "smoke": 0.25
+        }
+      },
+      "*-peanut": {
+        "immersivelighting": {
+          "flameHue": 6,
+          "flameSat": 6,
+          "luminosity": 0.9,
+          "smoke": 0.25
+        }
+      },
+      "*-soy": {
+        "immersivelighting": {
+          "flameHue": 6,
+          "flameSat": 6,
+          "luminosity": 0.9,
+          "smoke": 0.25
+        }
+      },
+      "*-rice": {
+        "immersivelighting": {
+          "flameHue": 6,
+          "flameSat": 6,
+          "luminosity": 0.9,
+          "smoke": 0.25
+        }
+      },
+      "*-seed": {
+        "immersivelighting": {
+          "flameHue": 6,
+          "flameSat": 6,
+          "luminosity": 0.9,
+          "smoke": 0.25
+        }
+      }
+    },
+    "dependsOn": [
+      {
+        "modid": "expandedfoods"
+      }
+    ]
+  },
+  {
+    "comment": "Lard: dull orange-red, smoky.",
+    "file": "expandedfoods:itemtypes/liquid/lard",
+    "op": "add",
+    "path": "/attributes/immersivelighting",
+    "value": {
+      "flameHue": 4,
+      "flameSat": 7,
+      "luminosity": 0.75,
+      "smoke": 0.55
+    },
+    "dependsOn": [
+      {
+        "modid": "expandedfoods"
+      }
+    ]
+  },
+  {
+    "comment": "Strong spirit: blue-white.",
+    "file": "expandedfoods:itemtypes/liquid/strongspiritportion",
+    "op": "add",
+    "path": "/attributes/immersivelighting",
+    "value": {
+      "flameHue": 36,
+      "flameSat": 2,
+      "luminosity": 0.5,
+      "smoke": 0.0
+    },
+    "dependsOn": [
+      {
+        "modid": "expandedfoods"
+      }
+    ]
+  },
+  {
+    "comment": "Potent spirit: pale blue like aqua vitae.",
+    "file": "expandedfoods:itemtypes/liquid/potentspiritportion",
+    "op": "add",
+    "path": "/attributes/immersivelighting",
+    "value": {
+      "flameHue": 39,
+      "flameSat": 3,
+      "luminosity": 0.55,
+      "smoke": 0.0
+    },
+    "dependsOn": [
+      {
+        "modid": "expandedfoods"
+      }
+    ]
   }
 ]

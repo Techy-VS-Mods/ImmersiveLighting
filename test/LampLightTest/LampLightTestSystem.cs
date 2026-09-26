@@ -22,7 +22,7 @@ namespace LampLightTest
         BlockPos P, Q, R, T1;
         BlockEntityLamp lamp, lamp2;
         BlockPos S;
-        bool instancingOk = true, fuelsOk = true;
+        bool instancingOk = true, fuelsOk = true, flamesOk = true;
 
         public override bool ShouldLoad(EnumAppSide forSide) => forSide == EnumAppSide.Server;
 
@@ -92,6 +92,9 @@ namespace LampLightTest
             steps.Add(("L6b read", 0, () => Snap("L6b 5s later")));
             // ---- fuel compat: every liquid fuel from a mod that IS installed must carry burn properties and be accepted by the lamp
             steps.Add(("F1 fuel compat", 1500, () => CheckFuels()));
+            steps.Add(("F2 flame colour + brightness per fuel", 1500, () => CheckFlames()));
+            steps.Add(("F3 world light with olive oil at wick 3", 1500, () => LightWorldCheck("game:oilportion-olive", 18)));
+            steps.Add(("F3 read", 3500, () => ReadWorldLight()));
 
             // ---- regression: two placed lamps must each report their OWN fuel (BlockLamp is shared by every lamp of a variant)
             steps.Add(("S1 place second lamp, different fuel", 1500, () =>
@@ -105,7 +108,7 @@ namespace LampLightTest
             steps.Add(("S1 read", 1500, () => CheckInstancing()));
             steps.Add(("S2 change lamp B only", 1500, () => { lamp2.Inventory[0].Itemstack = new ItemStack(fuel, 70); lamp2.Inventory[0].MarkDirty(); }));
             steps.Add(("S2 read", 1500, () => CheckInstancing()));
-            steps.Add(("done", 0, () => Finish(!instancingOk ? "FAIL: lamps share state (instancing bug)" : !fuelsOk ? "FAIL: fuel compat" : "OK")));
+            steps.Add(("done", 0, () => Finish(!instancingOk ? "FAIL: lamps share state (instancing bug)" : !fuelsOk ? "FAIL: fuel compat" : !flamesOk ? "FAIL: flame profile" : "OK")));
             Next();
         }
 
@@ -137,15 +140,85 @@ namespace LampLightTest
                     var cp = item.CombustibleProps;
                     lamp.Inventory[0].Itemstack = new ItemStack(item, 10); lamp.Inventory[0].MarkDirty();
                     bool accepted = lamp.Inventory[0].Itemstack != null;
-                    bool ok = cp != null && accepted && lamp.HasFuel;
+                    var prof = item.Attributes?["immersivelighting"];
+                    bool hasProfile = prof != null && prof.Exists && prof["flameHue"].Exists && prof["luminosity"].Exists && prof["smoke"].Exists;
+                    bool ok = cp != null && accepted && lamp.HasFuel && hasProfile;
                     if (ok) good++; else fuelsOk = false;
-                    var line = string.Format("FUEL {0,-48} temp={1,5} dur={2,4} (~{3,3:0} min/L at wick 1) accepted={4} hasFuel={5} => {6}",
-                        item.Code, cp?.BurnTemperature, cp?.BurnDuration, (cp?.BurnDuration ?? 0) * 50, accepted, lamp.HasFuel, ok ? "PASS" : "FAIL");
+                    var line = string.Format("FUEL {0,-48} temp={1,5} dur={2,4} (~{3,3:0} min/L at wick 1) accepted={4} hasFuel={5} profile={6} => {7}",
+                        item.Code, cp?.BurnTemperature, cp?.BurnDuration, (cp?.BurnDuration ?? 0) * 50, accepted, lamp.HasFuel, hasProfile, ok ? "PASS" : "FAIL");
                     log.AppendLine(line); sapi.Logger.Notification("[LampTest] " + line);
                     lamp.Inventory[0].Itemstack = null; lamp.Inventory[0].MarkDirty();
                 }
             }
             log.AppendLine(string.Format("FUELCHECK {0} of {1} installed fuel variants OK ({2} fuel families absent)", good, present, absentCodes));
+        }
+
+        // fuel, expected hue, expected saturation, expected brightness at wick 1/2/3 (formula: base 5/10/20 x luminosity x (1 - 0.5 x smoke))
+        static readonly (string code, int hue, int sat, int[] v)[] FlameExpect =
+        {
+            ("game:alcoholportion", 39, 3, new[] { 3, 6, 11 }),
+            ("game:oilportion-olive", 7, 6, new[] { 5, 9, 18 }),
+            ("game:oilportion-flax", 5, 7, new[] { 4, 7, 14 }),
+            ("game:spiritportion-apple", 9, 1, new[] { 2, 5, 10 }),
+            ("expandedfoods:lard", 4, 7, new[] { 3, 6, 11 }),
+            ("expandedfoods:potentspiritportion-apple", 39, 3, new[] { 3, 6, 11 }),
+            ("expandedfoods:strongspiritportion-apple", 36, 2, new[] { 2, 5, 10 }),
+            ("expandedfoods:foodoilportion-sunflower", 6, 6, new[] { 4, 8, 16 }),
+            ("dairyplus:ghee", 7, 5, new[] { 4, 8, 15 }),
+            ("bdorchard:oilportion-avocado", 7, 6, new[] { 5, 9, 18 }),
+        };
+
+        void SetFuel(Item item)
+        {
+            lamp.Inventory[0].Itemstack = new ItemStack(item, 100); lamp.Inventory[0].MarkDirty();
+        }
+
+        void CheckFlames()
+        {
+            int good = 0, present = 0;
+            foreach (var (code, hue, sat, want) in FlameExpect)
+            {
+                var item = sapi.World.GetItem(new AssetLocation(code));
+                if (item == null) { log.AppendLine(string.Format("FLAME {0,-44} absent (mod not installed)", code)); continue; }
+                present++;
+                lamp.Inventory[0].Itemstack = null; lamp.Inventory[0].MarkDirty();
+                SetFuel(item);
+                if (!lamp.Lit) Call("ToggleLightedState");
+                for (int i = 0; i < 3; i++) lamp.ChangeWickHeight(BlockEntityLamp.WickMotion.Down);   // clamps at wick 1
+                var got = new List<string>(); bool ok = true;
+                for (int w = 1; w <= 3; w++)
+                {
+                    var snap = lamp.LightSnapshot;
+                    bool match = snap != null && snap[0] == hue && snap[1] == sat && snap[2] == want[w - 1];
+                    ok &= match;
+                    got.Add(snap == null ? "null" : string.Format("({0},{1},{2}){3}", snap[0], snap[1], snap[2], match ? "" : "!=" + want[w - 1]));
+                    if (w < 3) lamp.ChangeWickHeight(BlockEntityLamp.WickMotion.Up);
+                }
+                if (ok) good++; else flamesOk = false;
+                var line = string.Format("FLAME {0,-44} hue/sat/V by wick: {1} => {2}", code, string.Join(" ", got), ok ? "PASS" : "FAIL");
+                log.AppendLine(line); sapi.Logger.Notification("[LampTest] " + line);
+            }
+            lamp.Inventory[0].Itemstack = null; lamp.Inventory[0].MarkDirty();
+            log.AppendLine(string.Format("FLAMECHECK {0} of {1} present fuels match the expected colour and brightness", good, present));
+        }
+
+        void LightWorldCheck(string code, int expected)
+        {
+            var item = sapi.World.GetItem(new AssetLocation(code));
+            if (item == null) { log.AppendLine("WORLDLIGHT skipped, " + code + " absent"); return; }
+            lamp.Inventory[0].Itemstack = null; lamp.Inventory[0].MarkDirty();
+            SetFuel(item);
+            if (!lamp.Lit) Call("ToggleLightedState");
+            while (lamp.WickHeight > 1) lamp.ChangeWickHeight(BlockEntityLamp.WickMotion.Down);
+            while (lamp.WickHeight < 3) lamp.ChangeWickHeight(BlockEntityLamp.WickMotion.Up);
+        }
+
+        void ReadWorldLight()
+        {
+            var line = string.Format("WORLDLIGHT olive oil at wick 3: light at lamp={0} (expected 18), +2={1}, +4={2}", Light(P), Light(Q), Light(R));
+            if (Light(P) != 18) flamesOk = false;
+            log.AppendLine(line); sapi.Logger.Notification("[LampTest] " + line);
+            lamp.Inventory[0].Itemstack = null; lamp.Inventory[0].MarkDirty();
         }
 
         void CheckInstancing()

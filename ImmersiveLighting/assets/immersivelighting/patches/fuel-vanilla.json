@@ -5,8 +5,14 @@
     "op": "add",
     "path": "/combustiblePropsByType",
     "value": {
-      "*-olive": { "burnTemperature": 900, "burnDuration": 2.5 },
-      "*-flax": { "burnTemperature": 850, "burnDuration": 2.25 }
+      "*-olive": {
+        "burnTemperature": 900,
+        "burnDuration": 2.5
+      },
+      "*-flax": {
+        "burnTemperature": 850,
+        "burnDuration": 2.25
+      }
     }
   },
   {
@@ -14,6 +20,45 @@
     "file": "game:itemtypes/liquid/spirit",
     "op": "add",
     "path": "/combustibleProps",
-    "value": { "burnTemperature": 1000, "burnDuration": 1 }
+    "value": {
+      "burnTemperature": 1000,
+      "burnDuration": 1
+    }
+  },
+  {
+    "comment": "Vanilla oil flames: olive golden and clean, linseed orange and smokier.",
+    "file": "game:itemtypes/liquid/oilportion",
+    "op": "add",
+    "path": "/attributesByType",
+    "value": {
+      "*-olive": {
+        "immersivelighting": {
+          "flameHue": 7,
+          "flameSat": 6,
+          "luminosity": 0.95,
+          "smoke": 0.15
+        }
+      },
+      "*-flax": {
+        "immersivelighting": {
+          "flameHue": 5,
+          "flameSat": 7,
+          "luminosity": 0.85,
+          "smoke": 0.4
+        }
+      }
+    }
+  },
+  {
+    "comment": "Plain spirit: impurities (sodium, congeners) tint the blue flame toward white.",
+    "file": "game:itemtypes/liquid/spirit",
+    "op": "add",
+    "path": "/attributes/immersivelighting",
+    "value": {
+      "flameHue": 9,
+      "flameSat": 1,
+      "luminosity": 0.5,
+      "smoke": 0.03
+    }
   }
 ]

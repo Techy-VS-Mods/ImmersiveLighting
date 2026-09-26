@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0
+- **Flame colour per fuel.** Each fuel now burns the colour it would in real life: aqua vitae and potent spirits a pale blue,
+  strong spirits blue-white, plain and fruit spirits near white (impurities tint the blue flame), olive and avocado oil golden
+  yellow, seed and nut oils yellow-orange, linseed orange, ghee warm yellow, lard a dull orange-red.
+- **Brightness follows how the fuel burns.** Soot makes flames glow, so clean spirit flames are dim and oils are bright.
+  Brightness = wick level (5/10/20) x fuel luminosity x (1 - half the smoke), so a smoky fuel loses some of its light. Turning
+  the wick up smokes more, as in a real lamp. Global tuning: `brightnessScale` in the lamp block's attributes (default 1.0).
+- **Smoke.** Lit lamps release smoke particles scaled by the fuel's smoke value and the wick height. Client setting
+  `SmokeScale` in `ModConfig/immersivelighting.json` (0 turns it off).
+- Per-fuel values live in the patches (`attributes.immersivelighting`: `flameHue` 0-63, `flameSat` 0-7, `luminosity`, `smoke`).
+  Fuels from mods we do not patch fall back to a warm, mildly smoky default.
+- `burnTemperature` is kept as flavour only and no longer used for colour.
+- Tests: the headless harness now checks every fuel's colour and brightness at each wick height and the resulting world light.
+
 ## 1.1.0
 - **Fixes lamps sharing state.** Fuel level, lit state and wick height were stored on the shared block object, so every placed
   lamp of the same variant showed the fuel level of whichever lamp updated last, and the interaction hints and the lit/unlit

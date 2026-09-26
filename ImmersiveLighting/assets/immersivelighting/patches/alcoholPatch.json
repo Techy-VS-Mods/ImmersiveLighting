@@ -4,6 +4,21 @@
     "file": "game:itemtypes/liquid/alcohol",
     "op": "add",
     "path": "/combustibleProps",
-    "value": { "burnTemperature": 1100, "burnDuration": 1 }
+    "value": {
+      "burnTemperature": 1100,
+      "burnDuration": 1
+    }
+  },
+  {
+    "comment": "Aqua vitae flame: clean ethanol burns pale blue and dim (a blue flame has no glowing soot) with no smoke.",
+    "file": "game:itemtypes/liquid/alcohol",
+    "op": "add",
+    "path": "/attributes/immersivelighting",
+    "value": {
+      "flameHue": 39,
+      "flameSat": 3,
+      "luminosity": 0.55,
+      "smoke": 0.0
+    }
   }
 ]

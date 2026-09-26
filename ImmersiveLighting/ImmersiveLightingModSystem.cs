@@ -12,6 +12,7 @@ public class ImmersiveLightingModSystem : ModSystem
     // Useful for registering block/entity classes on both sides
     public override void Start(ICoreAPI api)
     {;
+        ImmersiveLightingConfig.Load(api);
         api.RegisterBlockEntityClass("BlockEntityLamp", typeof(BlockEntityLamp));
         api.RegisterBlockClass("BlockLamp", typeof(BlockLamp));
     }
