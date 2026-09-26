@@ -1,29 +1,26 @@
 # Changelog
 
-## 1.3.0-rc.1 (release candidate)
-- **Lamp readout.** Looking at a lamp shows its fuel, flame colour and smoke, and how long the fuel will last at the current
-  wick ("Burning: about 50 min of fuel left at this wick").
-- **Lighting needs an ignition source.** A lamp is now lit with a firestarter or a lit torch (the game's own ignition system, so
-  other mods' igniters work too, and the interaction hint shows what can light it). Dousing and wick changes stay bare-handed.
-  Can be turned off (see settings).
-- **Server settings** in `ModConfig/immersivelighting-server.json`: `BurnRateScale`, `BrightnessScale`, `SmokeScale`,
-  `RequireIgnitionSource`. They are sent to every client, so server and clients always agree.
-- **Handbook page** listing the fuels, with their flame, brightness, smoke and burn times.
-- Tests: config, ignition and readout checks added to the headless harness (14 checks) on top of the fuel and flame checks.
-
-## 1.2.0
-- **Flame colour per fuel.** Each fuel now burns the colour it would in real life: aqua vitae and potent spirits a pale blue,
-  strong spirits blue-white, plain and fruit spirits near white (impurities tint the blue flame), olive and avocado oil golden
-  yellow, seed and nut oils yellow-orange, linseed orange, ghee warm yellow, lard a dull orange-red.
-- **Brightness follows how the fuel burns.** Soot makes flames glow, so clean spirit flames are dim and oils are bright.
-  Brightness = wick level (5/10/20) x fuel luminosity x (1 - half the smoke), so a smoky fuel loses some of its light. Turning
-  the wick up smokes more, as in a real lamp. Global tuning: `brightnessScale` in the lamp block's attributes (default 1.0).
-- **Smoke.** Lit lamps release smoke particles scaled by the fuel's smoke value and the wick height. Client setting
-  `SmokeScale` in `ModConfig/immersivelighting.json` (0 turns it off).
+## 1.2.0-rc.1 (release candidate)
+- **Flame colour per fuel.** Each fuel burns the colour it would in real life: aqua vitae and potent spirits a pale blue, strong
+  spirits blue-white, plain and fruit spirits near white (impurities tint the blue flame), olive and avocado oil golden yellow, seed
+  and nut oils yellow-orange, linseed orange, ghee warm yellow, lard a dull orange-red.
+- **Brightness follows how the fuel burns.** Soot makes flames glow, so clean spirit flames are dim and oils are bright. Brightness
+  = wick level (5/10/20) x fuel luminosity x (1 - half the smoke), so a smoky fuel loses some of its light. Turning the wick up
+  smokes more, as in a real lamp.
+- **Smoke.** Lit lamps release smoke particles scaled by the fuel's smoke value and the wick height.
 - Per-fuel values live in the patches (`attributes.immersivelighting`: `flameHue` 0-63, `flameSat` 0-7, `luminosity`, `smoke`).
-  Fuels from mods we do not patch fall back to a warm, mildly smoky default.
-- `burnTemperature` is kept as flavour only and no longer used for colour.
-- Tests: the headless harness now checks every fuel's colour and brightness at each wick height and the resulting world light.
+  Fuels from mods we do not patch fall back to a warm, mildly smoky default. `burnTemperature` is flavour only.
+- **Lamp readout.** Looking at a lamp shows its fuel, flame colour and smoke, and how long the fuel will last at the current wick
+  ("Burning: about 50 min of fuel left at this wick").
+- **Lighting needs an ignition source.** A lamp is lit with a firestarter or a lit torch (the game's own ignition system, so other
+  mods' igniters work too, and the interaction hint shows what can light it). Dousing and wick changes stay bare-handed. Can be
+  turned off (see settings).
+- **Server settings** in `ModConfig/immersivelighting-server.json`: `BurnRateScale`, `BrightnessScale`, `SmokeScale`,
+  `RequireIgnitionSource`. They are sent to every client, so server and clients always agree. Client setting `SmokeScale` in
+  `ModConfig/immersivelighting.json` scales smoke in your own game only.
+- **Handbook page** listing the fuels, with their flame, brightness, smoke and burn times.
+- Tests: the headless harness checks every fuel's colour and brightness at each wick height, the resulting world light, and the
+  config, ignition and readout behaviour.
 
 ## 1.1.0
 - **Fixes lamps sharing state.** Fuel level, lit state and wick height were stored on the shared block object, so every placed
