@@ -13,8 +13,8 @@ An attempt to make more immersive lighting sources for Vintage Story.
 - Can contain any liquid but will only light when a combustible liquid is present.
 
 ### Liquid Fuels
-Any liquid with burn properties works in the lamp. This mod gives them to real liquids (not solid fats) so they can be poured in
-and burnt. A litre (100 portions) lasts the times below at the lowest wick; each wick step uses one more portion per tick, so
+Any liquid with burn properties works in the lamp. This mod adds burn properties to a range of oils, fats and spirits so they can
+be poured in and burnt. A litre (100 portions) lasts the times below at the lowest wick; each wick step uses one more portion per tick, so
 wick 3 burns three times faster. Thin, volatile spirits burn quickest; thicker oils and fats are drawn up the wick more slowly.
 
 | Fuel | Burn time per litre (wick 1) | Flame |
