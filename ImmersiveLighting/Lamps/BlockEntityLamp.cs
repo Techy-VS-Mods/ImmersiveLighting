@@ -31,6 +31,16 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     private float _fuelMultiplyer = 1;
     private double _remainingFuel = 0;
     private bool _meshChanged = true;
+
+    // Per-position light, read off the main thread by BlockLamp.GetLightHsv during relight, so it is an immutable
+    // array that is swapped atomically. null until the first RefreshLight: a chunk relight that runs before Initialize
+    // then falls back to the variant's static light instead of reading a half-initialised entity.
+    private volatile byte[] _lightSnapshot;
+    public byte[] LightSnapshot => _lightSnapshot;
+
+    // Test hook only: skips RemoveBlockLight to reproduce "dimming leaves the old light behind".
+    public static bool DebugNaiveRelight;
+
     private BlockLampStates CurrentState
     {
         get
@@ -124,7 +134,45 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     private bool ToggleLightedState()
     {
         _lit = !_lit && _hasFuel;
+        RefreshLight();
         return true;
+    }
+
+    /// <summary>
+    /// Light for the lamp's current state, using the same brightness steps as the off/low/med/high variants
+    /// (V 0/5/10/20). The variants now only drive the mesh; light comes from this snapshot via BlockLamp.GetLightHsv.
+    /// </summary>
+    private byte[] ComputeHsv()
+    {
+        switch ((int)NewState)
+        {
+            case 1: return new byte[] { 4, 5, 5 };
+            case 2: return new byte[] { 4, 5, 10 };
+            case 3: return new byte[] { 4, 5, 20 };
+            default: return new byte[] { 0, 0, 0 };
+        }
+    }
+
+    /// <summary>
+    /// Forces a light recalculation when the lamp's light changes without the block id changing. The engine only
+    /// relights from queued block-change tasks, and an exchange reads the old and new light from the CURRENT state,
+    /// so dimming would leave the old light behind: the old contribution is removed first, then the block is
+    /// re-exchanged to enqueue the relight (same pattern as vanilla ground storage). Safe on both sides.
+    /// </summary>
+    public void RefreshLight()
+    {
+        if (Api == null || Pos == null) return;
+        var previous = _lightSnapshot ?? Block?.LightHsv ?? new byte[] { 0, 0, 0 };
+        var next = ComputeHsv();
+        if (_lightSnapshot != null && previous.AsSpan().SequenceEqual(next)) return;
+
+        var ba = Api.World.BlockAccessor;
+        if (!DebugNaiveRelight && previous.Length >= 3 && previous[2] > 0)
+        {
+            ba.RemoveBlockLight((byte[])previous.Clone(), Pos);
+        }
+        _lightSnapshot = next;
+        ba.ExchangeBlock(ba.GetBlock(Pos).Id, Pos);
     }
     
     public enum WickMotion
@@ -151,6 +199,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
             return true;
         }
         Api.Logger.Notification("Wick set to" + _wickHeight);
+        RefreshLight();
         MarkDirty(true);
         return true;
     }
@@ -188,6 +237,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
             }
             
             _remainingFuel = CalculateRemainingFuel();
+            RefreshLight();
             _meshChanged = true;
             MarkDirty(true);
         }
@@ -266,7 +316,12 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
             ((BlockLamp)Block).Lit = _lit = tree.GetBool("lit");
             ((BlockLamp)Block).Filled = tree.GetBool("filled");
             ((BlockLamp)Block).RemainingFuel = _remainingFuel = tree.GetDouble("remainingFuel");
-            
+            _wickHeight = (int)tree.GetDouble("wickHeight", _wickHeight);
+
+            // The server's ExchangeBlock packet can be processed before this attribute update, so the client relight
+            // would read stale state. Refresh from the freshly received state here.
+            RefreshLight();
+
             _currentMesh = GenMesh();
             MarkDirty(true);
         }
