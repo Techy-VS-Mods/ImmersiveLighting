@@ -40,6 +40,9 @@ smoke down or off with `SmokeScale` in `ModConfig/immersivelighting.json`.
 Compatibility patches are per mod and only apply when that mod is installed (`dependsOn`), so nothing warns when a mod is absent:
 base game, Expanded Foods, Dairy Plus and Biodiversity (orchard and crops).
 
+## AI Usage
+I use Claude, an AI assistant from Anthropic, for rapid development. I remain in sole control of the code and the direction of this mod. I am a developer with over 15 years of experience, and I provide the direction and guidance rather than letting the AI do all the thinking.
+
 ## Special Thanks to the following individuals on Discord for their support
 - Pizza2000
 - Dana
