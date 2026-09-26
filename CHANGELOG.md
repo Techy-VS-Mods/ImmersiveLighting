@@ -1,25 +1,7 @@
 # Changelog
 
 ## 1.2.0-rc.1 (release candidate)
-Everything since 1.0.2, the last release (the interim 1.0.3 and 1.1.0 builds were never released).
-
-**Updated for Vintage Story 1.22**
-- Ported to 1.22 (.NET 10). Requires game version 1.22.0 or newer.
-
-**Fixes**
-- Lamps no longer share state. Fuel level, lit state and wick height were stored on the block shared by every lamp of the same
-  variant, so every placed lamp showed the fuel level of whichever one updated last, and the interaction hints and lit/unlit look
-  could be wrong too. Each lamp now keeps its own state.
-- Lamp light now updates when you light or douse the lamp, change the wick, or when the fuel runs out. The game only recalculates
-  block light when a block changes, so a lamp could keep its old light; it now forces the recalculation, clearing the old light
-  first when it dims.
-
-**More fuels**
-- Burn properties added (each patch only applies when its mod is installed, nothing required) to real liquid fuels from the base
-  game (olive and flax oil, spirit), Expanded Foods (cooking oils, lard, strong and potent spirits), Dairy Plus (ghee) and
-  Biodiversity (avocado and engkala oil, fruit and potato spirits).
-- Rebalanced burn times: a litre at the lowest wick lasts about 50 min for aqua vitae and spirits, 113 min for flax and seed/nut
-  oils, 125 min for olive, avocado and engkala oil, 150 min for ghee and lard. Aqua vitae flame temperature is now 1100 (was 700).
+Everything since 1.1.0.
 
 **Flame colour, brightness and smoke**
 - Each fuel burns the colour it would in real life: aqua vitae and potent spirits pale blue, strong spirits blue-white, plain and
@@ -40,10 +22,35 @@ Everything since 1.0.2, the last release (the interim 1.0.3 and 1.1.0 builds wer
   `ModConfig/immersivelighting.json` scales smoke in your own game only.
 - Handbook page "Lamp Fuels".
 
+**Tests**
+- The headless harness checks every installed fuel's colour and brightness at each wick height and the resulting world light, and
+  the config, ignition and readout behaviour.
+
+## 1.1.0
+Includes the changes from an interim 1.0.3 build that was never released separately.
+
+**Updated for Vintage Story 1.22**
+- Ported to 1.22 (.NET 10). Requires game version 1.22.0 or newer.
+
+**Fixes**
+- Lamps no longer share state. Fuel level, lit state and wick height were stored on the block shared by every lamp of the same
+  variant, so every placed lamp showed the fuel level of whichever one updated last, and the interaction hints and lit/unlit look
+  could be wrong too. Each lamp now keeps its own state.
+- Lamp light now updates when you light or douse the lamp, change the wick, or when the fuel runs out. The game only recalculates
+  block light when a block changes, so a lamp could keep its old light; it now forces the recalculation, clearing the old light
+  first when it dims.
+
+**More fuels**
+- Burn properties added (each patch only applies when its mod is installed, nothing required) to real liquid fuels from the base
+  game (olive and flax oil, spirit), Expanded Foods (cooking oils, lard, strong and potent spirits), Dairy Plus (ghee) and
+  Biodiversity (avocado and engkala oil, fruit and potato spirits).
+- Rebalanced burn times: a litre at the lowest wick lasts about 50 min for aqua vitae and spirits, 113 min for flax and seed/nut
+  oils, 125 min for olive, avocado and engkala oil, 150 min for ghee and lard. Aqua vitae flame temperature is now 1100 (was 700).
+
 **For mod authors**
 - `BlockLamp` no longer has the `HasFuel`, `Lit`, `Filled`, `RemainingFuel` and `WickHeight` fields. Read them from
   `BlockEntityLamp` (read-only properties).
 
 **Tests**
-- A headless server harness (`test/`) checks the light through every lamp state, that two lamps keep separate state, every
-  installed fuel's colour and brightness at each wick height, and the config, ignition and readout behaviour.
+- A headless server harness (`test/`) checks the light through every lamp state, that two lamps keep separate state, and that every
+  installed fuel has burn properties and is accepted by the lamp.
