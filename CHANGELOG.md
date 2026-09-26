@@ -27,18 +27,10 @@ Everything since 1.1.0.
   the config, ignition and readout behaviour.
 
 ## 1.1.0
-Includes the changes from an interim 1.0.3 build that was never released separately.
-
-**Updated for Vintage Story 1.22**
-- Ported to 1.22 (.NET 10). Requires game version 1.22.0 or newer.
-
 **Fixes**
 - Lamps no longer share state. Fuel level, lit state and wick height were stored on the block shared by every lamp of the same
   variant, so every placed lamp showed the fuel level of whichever one updated last, and the interaction hints and lit/unlit look
   could be wrong too. Each lamp now keeps its own state.
-- Lamp light now updates when you light or douse the lamp, change the wick, or when the fuel runs out. The game only recalculates
-  block light when a block changes, so a lamp could keep its old light; it now forces the recalculation, clearing the old light
-  first when it dims.
 
 **More fuels**
 - Burn properties added (each patch only applies when its mod is installed, nothing required) to real liquid fuels from the base
@@ -52,5 +44,12 @@ Includes the changes from an interim 1.0.3 build that was never released separat
   `BlockEntityLamp` (read-only properties).
 
 **Tests**
-- A headless server harness (`test/`) checks the light through every lamp state, that two lamps keep separate state, and that every
-  installed fuel has burn properties and is accepted by the lamp.
+- A headless server harness (`test/`) checks that two lamps keep separate state and that every installed fuel has burn properties
+  and is accepted by the lamp.
+
+## 1.0.3
+- Updated for Vintage Story 1.22 (.NET 10). Requires game version 1.22.0 or newer.
+- Lamp light now updates when you light or douse the lamp, change the wick, or when the fuel runs out. The game only recalculates
+  block light when a block changes, so a lamp could keep its old light; it now forces the recalculation, clearing the old light
+  first when it dims. The client re-applies the light when the lamp's state arrives from the server.
+- Headless server test harness (`test/`) and lighting research notes (`docs/`).

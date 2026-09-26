@@ -43,6 +43,8 @@ base game, Expanded Foods, Dairy Plus and Biodiversity (orchard and crops).
 ## AI Usage
 I use Claude, an AI assistant from Anthropic, for rapid development. I remain in sole control of the code and the direction of this mod. I am a developer with over 15 years of experience, and I provide the direction and guidance rather than letting the AI do all the thinking.
 
+If you would rather use a version made before I started using AI, versions 1.0.0 to 1.0.2 (1.0.2 is the last, for Vintage Story 1.21.5) are on the mod page. In the git repository, the `1.0.2` branch is the last state made without AI, and AI-assisted work starts with 1.0.3.
+
 ## Special Thanks to the following individuals on Discord for their support
 - Pizza2000
 - Dana
