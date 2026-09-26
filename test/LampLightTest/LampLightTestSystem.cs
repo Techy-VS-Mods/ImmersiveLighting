@@ -22,7 +22,7 @@ namespace LampLightTest
         BlockPos P, Q, R, T1;
         BlockEntityLamp lamp, lamp2;
         BlockPos S;
-        bool instancingOk = true, fuelsOk = true, flamesOk = true;
+        bool instancingOk = true, fuelsOk = true, flamesOk = true, featuresOk = true;
 
         public override bool ShouldLoad(EnumAppSide forSide) => forSide == EnumAppSide.Server;
 
@@ -93,7 +93,8 @@ namespace LampLightTest
             // ---- fuel compat: every liquid fuel from a mod that IS installed must carry burn properties and be accepted by the lamp
             steps.Add(("F1 fuel compat", 1500, () => CheckFuels()));
             steps.Add(("F2 flame colour + brightness per fuel", 1500, () => CheckFlames()));
-            steps.Add(("F3 world light with olive oil at wick 3", 1500, () => LightWorldCheck("game:oilportion-olive", 18)));
+            steps.Add(("I1 ignition, readout and settings", 1500, () => CheckFeatures()));
+            steps.Add(("F3 world light with olive oil at wick 3", 1500, () => LightWorldCheck("game:oilportion-olive", ExpectedV(0.95, 0.15, 3))));
             steps.Add(("F3 read", 3500, () => ReadWorldLight()));
 
             // ---- regression: two placed lamps must each report their OWN fuel (BlockLamp is shared by every lamp of a variant)
@@ -108,7 +109,7 @@ namespace LampLightTest
             steps.Add(("S1 read", 1500, () => CheckInstancing()));
             steps.Add(("S2 change lamp B only", 1500, () => { lamp2.Inventory[0].Itemstack = new ItemStack(fuel, 70); lamp2.Inventory[0].MarkDirty(); }));
             steps.Add(("S2 read", 1500, () => CheckInstancing()));
-            steps.Add(("done", 0, () => Finish(!instancingOk ? "FAIL: lamps share state (instancing bug)" : !fuelsOk ? "FAIL: fuel compat" : !flamesOk ? "FAIL: flame profile" : "OK")));
+            steps.Add(("done", 0, () => Finish(!instancingOk ? "FAIL: lamps share state (instancing bug)" : !fuelsOk ? "FAIL: fuel compat" : !flamesOk ? "FAIL: flame profile" : !featuresOk ? "FAIL: ignition/readout/settings" : "OK")));
             Next();
         }
 
@@ -153,20 +154,23 @@ namespace LampLightTest
             log.AppendLine(string.Format("FUELCHECK {0} of {1} installed fuel variants OK ({2} fuel families absent)", good, present, absentCodes));
         }
 
-        // fuel, expected hue, expected saturation, expected brightness at wick 1/2/3 (formula: base 5/10/20 x luminosity x (1 - 0.5 x smoke))
-        static readonly (string code, int hue, int sat, int[] v)[] FlameExpect =
+        // fuel, expected hue, expected saturation, luminosity, smoke. Brightness is computed independently of the mod:
+        // V = round(base(wick) x luminosity x brightnessScale x (1 - 0.5 x smoke x (0.6 + 0.4 x (wick - 1) / 2))), base = 5/10/20
+        static readonly (string code, int hue, int sat, double lum, double smoke)[] FlameExpect =
         {
-            ("game:alcoholportion", 39, 3, new[] { 3, 6, 11 }),
-            ("game:oilportion-olive", 7, 6, new[] { 5, 9, 18 }),
-            ("game:oilportion-flax", 5, 7, new[] { 4, 7, 14 }),
-            ("game:spiritportion-apple", 9, 1, new[] { 2, 5, 10 }),
-            ("expandedfoods:lard", 4, 7, new[] { 3, 6, 11 }),
-            ("expandedfoods:potentspiritportion-apple", 39, 3, new[] { 3, 6, 11 }),
-            ("expandedfoods:strongspiritportion-apple", 36, 2, new[] { 2, 5, 10 }),
-            ("expandedfoods:foodoilportion-sunflower", 6, 6, new[] { 4, 8, 16 }),
-            ("dairyplus:ghee", 7, 5, new[] { 4, 8, 15 }),
-            ("bdorchard:oilportion-avocado", 7, 6, new[] { 5, 9, 18 }),
+            ("game:alcoholportion", 39, 3, 0.55, 0.00), ("game:oilportion-olive", 7, 6, 0.95, 0.15), ("game:oilportion-flax", 5, 7, 0.85, 0.40),
+            ("game:spiritportion-apple", 9, 1, 0.50, 0.03), ("expandedfoods:lard", 4, 7, 0.75, 0.55),
+            ("expandedfoods:potentspiritportion-apple", 39, 3, 0.55, 0.00), ("expandedfoods:strongspiritportion-apple", 36, 2, 0.50, 0.00),
+            ("expandedfoods:foodoilportion-sunflower", 6, 6, 0.90, 0.25), ("dairyplus:ghee", 7, 5, 0.90, 0.30), ("bdorchard:oilportion-avocado", 7, 6, 0.95, 0.15),
         };
+
+        static double EnvNum(string name, double d) => double.TryParse(Environment.GetEnvironmentVariable(name), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : d;
+        static int ExpectedV(double lum, double smoke, int wick)
+        {
+            double eff = smoke * (0.6 + 0.4 * (wick - 1) / 2.0);
+            int v = (int)Math.Round(new[] { 5, 10, 20 }[wick - 1] * lum * EnvNum("LAMPTEST_BRIGHTNESS", 1) * (1 - 0.5 * eff));
+            return Math.Max(1, Math.Min(32, v));
+        }
 
         void SetFuel(Item item)
         {
@@ -176,8 +180,9 @@ namespace LampLightTest
         void CheckFlames()
         {
             int good = 0, present = 0;
-            foreach (var (code, hue, sat, want) in FlameExpect)
+            foreach (var (code, hue, sat, lum, smoke) in FlameExpect)
             {
+                var want = new[] { ExpectedV(lum, smoke, 1), ExpectedV(lum, smoke, 2), ExpectedV(lum, smoke, 3) };
                 var item = sapi.World.GetItem(new AssetLocation(code));
                 if (item == null) { log.AppendLine(string.Format("FLAME {0,-44} absent (mod not installed)", code)); continue; }
                 present++;
@@ -202,6 +207,63 @@ namespace LampLightTest
             log.AppendLine(string.Format("FLAMECHECK {0} of {1} present fuels match the expected colour and brightness", good, present));
         }
 
+        static string DurationText(double seconds)
+        {
+            int minutes = (int)Math.Round(seconds / 60.0, MidpointRounding.AwayFromZero);
+            if (seconds < 60) return "under a minute";
+            if (minutes >= 10) minutes = (int)(Math.Round(seconds / 300.0, MidpointRounding.AwayFromZero) * 5);
+            return minutes < 90 ? minutes + " min" : (minutes / 60) + " h " + (minutes % 60) + " min";
+        }
+
+        void Check(string name, bool ok, string detail)
+        {
+            var line = string.Format("FEATURE {0,-46} {1} {2}", name, ok ? "PASS" : "FAIL", detail);
+            log.AppendLine(line); sapi.Logger.Notification("[LampTest] " + line);
+            if (!ok) featuresOk = false;
+        }
+
+        void CheckFeatures()
+        {
+            var ba = sapi.World.BlockAccessor;
+            double burnRate = EnvNum("LAMPTEST_BURNRATE", 1), brightness = EnvNum("LAMPTEST_BRIGHTNESS", 1);
+            bool requireIgn = Environment.GetEnvironmentVariable("LAMPTEST_REQUIRE") != "false";
+            var cfg = sapi.World.Config;
+            // settings published into the world config (what clients receive)
+            Check("world config burn rate", Math.Abs(cfg.GetFloat("immersivelighting_burnRate") - burnRate) < 1e-4, "= " + cfg.GetFloat("immersivelighting_burnRate"));
+            Check("world config brightness", Math.Abs(cfg.GetFloat("immersivelighting_brightness") - brightness) < 1e-4, "= " + cfg.GetFloat("immersivelighting_brightness"));
+            Check("world config ignition required", cfg.GetBool("immersivelighting_requireIgnition") == requireIgn, "= " + cfg.GetBool("immersivelighting_requireIgnition"));
+            Check("bare-handed lighting follows the setting", lamp.CanLightBareHanded == !requireIgn, "CanLightBareHanded=" + lamp.CanLightBareHanded);
+
+            // ignition through the game's own IIgnitable interface
+            lamp.Inventory[0].Itemstack = null; lamp.Inventory[0].MarkDirty();
+            Check("no fuel: not ignitable", lamp.OnTryIgniteBlock(null, P, 0f) == Vintagestory.GameContent.EnumIgniteState.NotIgnitablePreventDefault, "");
+            var av = sapi.World.GetItem(new AssetLocation("game:alcoholportion"));
+            SetFuel(av);
+            Check("fuel, unlit: ignitable then ignite now", lamp.OnTryIgniteBlock(null, P, 0f) == Vintagestory.GameContent.EnumIgniteState.Ignitable
+                && lamp.OnTryIgniteBlock(null, P, 2f) == Vintagestory.GameContent.EnumIgniteState.IgniteNow, "");
+            while (lamp.WickHeight > 1) lamp.ChangeWickHeight(BlockEntityLamp.WickMotion.Down);
+            var handling = Vintagestory.API.Common.EnumHandling.PassThrough;
+            lamp.OnTryIgniteBlockOver(null, P, 2f, ref handling);
+            Check("igniter lights the lamp", lamp.Lit && handling == Vintagestory.API.Common.EnumHandling.PreventDefault, "lit=" + lamp.Lit);
+            Check("lit: not ignitable again", lamp.OnTryIgniteBlock(null, P, 2f) == Vintagestory.GameContent.EnumIgniteState.NotIgnitable, "");
+
+            // readout: fuel, flame, and time left (100 portions of aqua vitae, 30 s each at wick 1, scaled by the burn rate)
+            var info = ((BlockLamp)ba.GetBlock(P)).GetPlacedBlockInfo(sapi.World, P, null);
+            string expected1 = DurationText(100 * 30.0 / burnRate);
+            Check("readout: fuel name", info.Contains(av.GetHeldItemName(new ItemStack(av, 1))) || info.Contains("Fuel:"), "");
+            Check("readout: flame and smoke", info.Contains("pale blue") && info.Contains("no smoke"), "");
+            Check("readout: time left at wick 1", info.Contains("Burning") && info.Contains(expected1), "expected '" + expected1 + "'");
+            lamp.ChangeWickHeight(BlockEntityLamp.WickMotion.Up);
+            info = ((BlockLamp)ba.GetBlock(P)).GetPlacedBlockInfo(sapi.World, P, null);
+            string expected2 = DurationText(100 * 30.0 / 2 / burnRate);
+            Check("readout: time left halves at wick 2", info.Contains(expected2), "expected '" + expected2 + "'");
+            Call("ToggleLightedState");
+            info = ((BlockLamp)ba.GetBlock(P)).GetPlacedBlockInfo(sapi.World, P, null);
+            Check("readout: unlit wording", info.Contains("Would burn"), "");
+            Check("handbook page text present", Vintagestory.API.Config.Lang.Get("immersivelighting:fuels-title") != "immersivelighting:fuels-title", Vintagestory.API.Config.Lang.Get("immersivelighting:fuels-title"));
+            lamp.Inventory[0].Itemstack = null; lamp.Inventory[0].MarkDirty();
+        }
+
         void LightWorldCheck(string code, int expected)
         {
             var item = sapi.World.GetItem(new AssetLocation(code));
@@ -215,8 +277,8 @@ namespace LampLightTest
 
         void ReadWorldLight()
         {
-            var line = string.Format("WORLDLIGHT olive oil at wick 3: light at lamp={0} (expected 18), +2={1}, +4={2}", Light(P), Light(Q), Light(R));
-            if (Light(P) != 18) flamesOk = false;
+            var line = string.Format("WORLDLIGHT olive oil at wick 3: light at lamp={0} (expected {3}), +2={1}, +4={2}", Light(P), Light(Q), Light(R), ExpectedV(0.95, 0.15, 3));
+            if (Light(P) != ExpectedV(0.95, 0.15, 3)) flamesOk = false;
             log.AppendLine(line); sapi.Logger.Notification("[LampTest] " + line);
             lamp.Inventory[0].Itemstack = null; lamp.Inventory[0].MarkDirty();
         }

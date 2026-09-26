@@ -1,6 +1,8 @@
 using System;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
+using Vintagestory.API.Server;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
@@ -15,7 +17,7 @@ public enum BlockLampStates
     high
 }
 
-public class BlockEntityLamp : BlockEntityLiquidContainer
+public class BlockEntityLamp : BlockEntityLiquidContainer, IIgnitable
 {
     private int CapacityLitres { get; set; } = 1;
 
@@ -125,13 +127,63 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     /// </summary>
     /// <param name="player"></param>
     /// <returns>True if interaction handled otherwise false</returns>
+    /// <summary>False when the server requires an ignition source (firestarter, lit torch, ...) to light a lamp.</summary>
+    public bool CanLightBareHanded => !LampSettings.RequireIgnition(Api.World);
+
+    // ---- IIgnitable: the game's own ignition system. A firestarter (with its hold-to-light animation and durability use) or a
+    // lit torch lights the lamp when it has fuel; other mods' igniters work the same way.
+    public EnumIgniteState OnTryIgniteBlock(EntityAgent byEntity, BlockPos pos, float secondsIgniting)
+    {
+        if (_lit) return EnumIgniteState.NotIgnitable;
+        if (!_hasFuel) return EnumIgniteState.NotIgnitablePreventDefault;
+        return secondsIgniting > 1.5f ? EnumIgniteState.IgniteNow : EnumIgniteState.Ignitable;
+    }
+
+    public void OnTryIgniteBlockOver(EntityAgent byEntity, BlockPos pos, float secondsIgniting, ref EnumHandling handling)
+    {
+        handling = EnumHandling.PreventDefault;
+        if (Api?.Side == EnumAppSide.Server && !_lit && _hasFuel) ToggleLightedState();
+    }
+
+    public EnumIgniteState OnTryIgniteStack(EntityAgent byEntity, BlockPos pos, ItemSlot slot, float secondsIgniting) => EnumIgniteState.NotIgnitable;
+
+    // ---- readout
+    /// <summary>Seconds this lamp's fuel lasts at a wick height, allowing for the server's burn rate.</summary>
+    public double SecondsOfFuel(int wick)
+    {
+        var stack = inventory[0].Itemstack;
+        if (stack == null) return 0;
+        double burnDuration = stack.Item?.CombustibleProps?.BurnDuration ?? 1;
+        double secondsPerPortion = 30.0 * burnDuration / LampSettings.BurnRate(Api.World);
+        return stack.StackSize / (double)Math.Max(1, wick) * secondsPerPortion;
+    }
+
+    /// <summary>Fuel, flame and time left, for the block info shown when looking at the lamp.</summary>
+    public void AppendInfo(System.Text.StringBuilder sb)
+    {
+        var stack = inventory[0].Itemstack;
+        if (stack == null || !_hasFuel) return;
+        var profile = FuelProfile.For(stack);
+        sb.AppendLine(Lang.Get("immersivelighting:lamp-fuel", stack.GetName()));
+        sb.AppendLine(Lang.Get("immersivelighting:lamp-flame", Lang.Get("immersivelighting:" + profile.ColourKey), Lang.Get("immersivelighting:" + profile.SmokeKey)));
+        int wick = _lit ? Math.Max(1, (int)NewState) : _wickHeight;
+        sb.AppendLine(Lang.Get(_lit ? "immersivelighting:lamp-burn-left" : "immersivelighting:lamp-burn-unlit", LampText.Duration(SecondsOfFuel(wick))));
+    }
+
     public bool OnPlayerInteract(IPlayer player)
     {
         if (!_interactCooldown && Api.Side == EnumAppSide.Server)
         {
             if (player.Entity.Controls.ShiftKey) return _interactCooldown = ChangeWickHeight(WickMotion.Up);
             if (player.Entity.Controls.CtrlKey) return _interactCooldown = ChangeWickHeight(WickMotion.Down);
-            if (player.Entity.RightHandItemSlot.Empty) return ToggleLightedState();
+            if (player.Entity.RightHandItemSlot.Empty)
+            {
+                // Dousing and bare-handed lighting need no tool; lighting needs an ignition source unless the server allows it.
+                if (_lit || CanLightBareHanded) return ToggleLightedState();
+                if (_hasFuel && player is IServerPlayer serverPlayer)
+                    ((ICoreServerAPI)Api).SendIngameError(serverPlayer, "needignition", Lang.Get("immersivelighting:lamp-needs-igniter"));
+                return true;
+            }
             return false;
         }
         return false;
@@ -156,7 +208,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
         // Colour comes from what is burning; brightness is the wick's base level scaled by how luminous the flame is
         // (soot glows: clean spirit flames are dim, oils bright) and reduced by the smoke that escapes instead of glowing.
         var fuel = FuelProfile.For(inventory[0].Itemstack);
-        float scale = _ownBlock?.Attributes?["brightnessScale"].AsFloat(1f) ?? 1f;
+        float scale = (_ownBlock?.Attributes?["brightnessScale"].AsFloat(1f) ?? 1f) * LampSettings.Brightness(Api.World);
         float v = BaseBrightness[wick - 1] * fuel.Luminosity * scale * (1f - 0.5f * fuel.EffectiveSmoke(wick));
         return new byte[] { fuel.Hue, fuel.Sat, (byte)GameMath.Clamp((int)Math.Round(v), 1, 32) };
     }
@@ -169,7 +221,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     private void SpawnSmoke(float dt)
     {
         if (Api?.Side != EnumAppSide.Client || !_lit || inventory[0].Empty) return;
-        float scale = ImmersiveLightingConfig.Current.SmokeScale;
+        float scale = ImmersiveLightingConfig.Current.SmokeScale * LampSettings.Smoke(Api.World);
         int wick = (int)NewState;
         if (scale <= 0f || wick <= 0) return;
 
@@ -258,7 +310,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     public void UpdateFuel(float dt, bool force = false)
     {
         _fuelTimer += dt;
-        if (force || _fuelTimer > 30 * _fuelMultiplyer)
+        if (force || _fuelTimer > 30 * _fuelMultiplyer / LampSettings.BurnRate(Api.World))
         {
             _fuelTimer = 0;
             if (!inventory[0].Empty)

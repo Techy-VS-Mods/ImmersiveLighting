@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0
+- **Lamp readout.** Looking at a lamp shows its fuel, flame colour and smoke, and how long the fuel will last at the current
+  wick ("Burning: about 50 min of fuel left at this wick").
+- **Lighting needs an ignition source.** A lamp is now lit with a firestarter or a lit torch (the game's own ignition system, so
+  other mods' igniters work too, and the interaction hint shows what can light it). Dousing and wick changes stay bare-handed.
+  Can be turned off (see settings).
+- **Server settings** in `ModConfig/immersivelighting-server.json`: `BurnRateScale`, `BrightnessScale`, `SmokeScale`,
+  `RequireIgnitionSource`. They are sent to every client, so server and clients always agree.
+- **Handbook page** listing the fuels, with their flame, brightness, smoke and burn times.
+- Tests: config, ignition and readout checks added to the headless harness (14 checks) on top of the fuel and flame checks.
+
 ## 1.2.0
 - **Flame colour per fuel.** Each fuel now burns the colour it would in real life: aqua vitae and potent spirits a pale blue,
   strong spirits blue-white, plain and fruit spirits near white (impurities tint the blue flame), olive and avocado oil golden

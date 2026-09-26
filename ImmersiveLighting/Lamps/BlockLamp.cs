@@ -65,6 +65,8 @@ public class BlockLamp: BlockLiquidContainerBase
             {
                 ActionLangCode = Lang.Get("immersivelighting:lamp-light"),
                 MouseButton = EnumMouseButton.Right,
+                // when the server requires an ignition source, show what can light it (firestarter, lit torch, ...)
+                Itemstacks = LampSettings.RequireIgnition(world) ? BlockBehaviorCanIgnite.CanIgniteStacks(api, true)?.ToArray() : null,
                 ShouldApply = ((wi, blockSelection, entitySelection) => LampAt(world, blockSelection?.Position)?.Lit != true)
             });
     }
@@ -84,6 +86,7 @@ public class BlockLamp: BlockLiquidContainerBase
         if (lamp?.Filled == true)
         {
             info.AppendLine(Lang.Get(lamp.HasFuel ? "immersivelighting:lamp-filled-fuel" : "immersivelighting:lamp-filled") + " " + lamp.RemainingFuel + "L");
+            lamp.AppendInfo(info);
         }
         return info.ToString();
     }

@@ -18,6 +18,7 @@ PY
 M=$R/ImmersiveLighting/bin/Release/Mods/mod; (cd $M && zip -q -r $D/Mods/immersivelighting_test.zip .)
 T=$R/test/LampLightTest; mkdir -p $D/tt && cp $T/modinfo.json $D/tt/ && cp $T/bin/Release/LampLightTest.dll $D/tt/ && (cd $D/tt && zip -q -r $D/Mods/lamplighttest.zip .)
 for z in ${LAMPTEST_EXTRA_MODS:-}; do cp "$z" $D/Mods/; done
+if [ -n "${LAMPTEST_CONFIG:-}" ]; then mkdir -p $D/ModConfig && echo "$LAMPTEST_CONFIG" > $D/ModConfig/immersivelighting-server.json; fi
 export LAMPTEST_OUT=$D/lamptest-results.txt
 (cd $VINTAGE_STORY && timeout ${LAMPTEST_TIMEOUT:-240} dotnet VintagestoryServer.dll --dataPath $D > $D/console.txt 2>&1) || true
 echo "=== RESULTS ==="; cat $LAMPTEST_OUT 2>/dev/null || { echo "NO RESULTS FILE. tail of server log:"; tail -25 $D/Logs/server-main.log; }

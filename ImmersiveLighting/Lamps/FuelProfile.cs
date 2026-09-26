@@ -36,6 +36,20 @@ public readonly struct FuelProfile
             GameMath.Clamp(a["smoke"].AsFloat(d.Smoke), 0f, 1f));
     }
 
+    /// <summary>Lang key for the flame colour, from the game's hue (0-63, 5.6 degrees each) and saturation (0-7).</summary>
+    public string ColourKey
+    {
+        get
+        {
+            if (Sat <= 1) return "flame-nearwhite";
+            if (Hue >= 32 && Hue <= 44) return Sat >= 3 ? "flame-paleblue" : "flame-bluewhite";
+            if (Hue <= 3) return "flame-red";
+            return Hue switch { 4 => "flame-orangered", 5 => "flame-orange", 6 => "flame-yelloworange", 7 => Sat >= 6 ? "flame-golden" : "flame-warmyellow", _ => "flame-yellow" };
+        }
+    }
+
+    public string SmokeKey => Smoke < 0.02f ? "smoke-none" : Smoke < 0.2f ? "smoke-little" : Smoke < 0.35f ? "smoke-some" : Smoke < 0.5f ? "smoke-smoky" : "smoke-verysmoky";
+
     /// <summary>Smoke actually produced at a wick height (1-3): turning the wick up burns dirtier, as in a real lamp.</summary>
     public float EffectiveSmoke(int wick) => Smoke * (0.6f + 0.4f * (GameMath.Clamp(wick, 1, 3) - 1) / 2f);
 }

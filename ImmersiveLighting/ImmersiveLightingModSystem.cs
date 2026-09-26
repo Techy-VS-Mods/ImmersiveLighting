@@ -19,6 +19,7 @@ public class ImmersiveLightingModSystem : ModSystem
 
     public override void StartServerSide(ICoreServerAPI api)
     {
+        LampSettings.LoadAndPublish(api);
     }
 
     public override void StartClientSide(ICoreClientAPI api)

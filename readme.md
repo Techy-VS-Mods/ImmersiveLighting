@@ -1,5 +1,5 @@
 ## Immersive Lighting Mod
-#### Version 1.2.0
+#### Version 1.3.0
 
 ## Description
 An attempt to make more immersive lighting sources for Vintage Story. 
@@ -29,6 +29,13 @@ Each fuel has its own flame colour, luminosity and smoke (`attributes.immersivel
 Clean spirits burn a dim, pale blue; oils and fats burn brighter and yellower but smoke more, and a smokier flame loses some light.
 Turning the wick up increases smoke. Tune brightness globally with `brightnessScale` in the lamp block's attributes, and turn lamp
 smoke down or off with `SmokeScale` in `ModConfig/immersivelighting.json`.
+
+#### Lighting, readout and settings
+- Light a lamp by holding a firestarter or a lit torch against it (the game's own ignition system). Dousing and wick changes need no tool.
+- Look at a lamp to see its fuel, flame colour, smoke and how long the fuel lasts at the current wick.
+- Server settings in `ModConfig/immersivelighting-server.json`, sent to all clients: `BurnRateScale` (2 = fuel burns twice as fast),
+  `BrightnessScale`, `SmokeScale` (0 = no smoke) and `RequireIgnitionSource` (false lets lamps be lit bare-handed).
+- Client setting `SmokeScale` in `ModConfig/immersivelighting.json` scales smoke for just your own game.
 
 Compatibility patches are per mod and only apply when that mod is installed (`dependsOn`), so nothing warns when a mod is absent:
 base game, Expanded Foods, Dairy Plus and Biodiversity (orchard and crops).
