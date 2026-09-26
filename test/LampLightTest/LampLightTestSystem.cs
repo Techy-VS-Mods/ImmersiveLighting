@@ -19,7 +19,9 @@ namespace LampLightTest
         readonly List<(string name, int delayMs, Action act)> steps = new List<(string, int, Action)>();
         int stepIdx;
         BlockPos P, Q, R, T1;
-        BlockEntityLamp lamp;
+        BlockEntityLamp lamp, lamp2;
+        BlockPos S;
+        bool instancingOk = true;
 
         public override bool ShouldLoad(EnumAppSide forSide) => forSide == EnumAppSide.Server;
 
@@ -87,8 +89,37 @@ namespace LampLightTest
             steps.Add(("L6 read", 0, () => Snap("L6 fuel removed (should go dark)")));
             steps.Add(("L6b wait more", 5000, () => { }));
             steps.Add(("L6b read", 0, () => Snap("L6b 5s later")));
-            steps.Add(("done", 0, () => Finish("OK")));
+            // ---- regression: two placed lamps must each report their OWN fuel (BlockLamp is shared by every lamp of a variant)
+            steps.Add(("S1 place second lamp, different fuel", 1500, () =>
+            {
+                S = P.AddCopy(0, 0, -5);
+                ba.SetBlock(lampOff.BlockId, S);
+                lamp2 = ba.GetBlockEntity(S) as BlockEntityLamp;
+                lamp.Inventory[0].Itemstack = new ItemStack(fuel, 100); lamp.Inventory[0].MarkDirty();   // 1.0 L
+                lamp2.Inventory[0].Itemstack = new ItemStack(fuel, 30); lamp2.Inventory[0].MarkDirty();  // 0.3 L
+            }));
+            steps.Add(("S1 read", 1500, () => CheckInstancing()));
+            steps.Add(("S2 change lamp B only", 1500, () => { lamp2.Inventory[0].Itemstack = new ItemStack(fuel, 70); lamp2.Inventory[0].MarkDirty(); }));
+            steps.Add(("S2 read", 1500, () => CheckInstancing()));
+            steps.Add(("done", 0, () => Finish(instancingOk ? "OK" : "FAIL: lamps share state (instancing bug)")));
             Next();
+        }
+
+        void CheckInstancing()
+        {
+            var ba = sapi.World.BlockAccessor;
+            string InfoAt(BlockPos p) => ((BlockLamp)ba.GetBlock(p)).GetPlacedBlockInfo(sapi.World, p, null).Trim();
+            string a = InfoAt(P), b = InfoAt(S);
+            bool sameBlockObject = ReferenceEquals(ba.GetBlock(P), ba.GetBlock(S));
+            // the state must not live on the shared Block at all
+            var leaked = new List<string>();
+            foreach (var n in new[] { "HasFuel", "Lit", "Filled", "RemainingFuel", "WickHeight" })
+                if (typeof(BlockLamp).GetField(n, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) != null) leaked.Add(n);
+            bool ok = a != b && a.Length > 0 && b.Length > 0 && a.Contains(lamp.RemainingFuel + "L") && b.Contains(lamp2.RemainingFuel + "L") && leaked.Count == 0;
+            var msg = string.Format("INSTANCING sameBlockObject={0} | lamp A ({1}L): \"{2}\" | lamp B ({3}L): \"{4}\" | state fields on shared BlockLamp: [{5}] => {6}",
+                sameBlockObject, lamp.RemainingFuel, a, lamp2.RemainingFuel, b, string.Join(",", leaked), ok ? "PASS" : "FAIL");
+            log.AppendLine(msg); sapi.Logger.Notification("[LampTest] " + msg);
+            if (!ok) instancingOk = false;
         }
 
         void LogAt(string label, BlockPos p)

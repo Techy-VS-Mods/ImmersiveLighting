@@ -31,11 +31,10 @@ public class BlockLamp: BlockLiquidContainerBase
 
     public override int GetContainerSlotId(ItemStack containerStack) => 0;
 
-    public bool HasFuel = false;
-    public bool Lit = false;
-    public bool Filled = false;
-    public double RemainingFuel = 0;
-    public int WickHeight = 0;
+    // No per-lamp state lives here: this Block object is shared by every placed lamp of the same variant. Fuel, lit
+    // and wick height are read from the BlockEntityLamp at the position in question.
+    static BlockEntityLamp LampAt(IWorldAccessor world, BlockPos pos) =>
+        pos == null ? null : world?.BlockAccessor.GetBlockEntity(pos) as BlockEntityLamp;
 
     #region BlockInfo 
     
@@ -47,26 +46,26 @@ public class BlockLamp: BlockLiquidContainerBase
                 ActionLangCode = Lang.Get("immersivelighting:lamp-turn-up"),
                 MouseButton = EnumMouseButton.Left,
                 HotKeyCode = "shift",
-                ShouldApply = ((wi, blockSelection, entitySelection) => WickHeight < 3)
+                ShouldApply = ((wi, blockSelection, entitySelection) => (LampAt(world, blockSelection?.Position)?.WickHeight ?? 0) < 3)
             }).Append(
             new WorldInteraction()
             {
                 ActionLangCode = Lang.Get("immersivelighting:lamp-turn-down"),
                 MouseButton = EnumMouseButton.Right,
                 HotKeyCode = "shift",
-                ShouldApply = ((wi, blockSelection, entitySelection) => WickHeight > 1)
+                ShouldApply = ((wi, blockSelection, entitySelection) => (LampAt(world, blockSelection?.Position)?.WickHeight ?? 0) > 1)
             }).Append(
             new WorldInteraction()
             {
                 ActionLangCode = Lang.Get("immersivelighting:lamp-douse"),
                 MouseButton = EnumMouseButton.Right,
-                ShouldApply = ((wi, blockSelection, entitySelection) => Lit)
+                ShouldApply = ((wi, blockSelection, entitySelection) => LampAt(world, blockSelection?.Position)?.Lit == true)
             }).Append(
             new WorldInteraction()
             {
                 ActionLangCode = Lang.Get("immersivelighting:lamp-light"),
                 MouseButton = EnumMouseButton.Right,
-                ShouldApply = ((wi, blockSelection, entitySelection) => !Lit)
+                ShouldApply = ((wi, blockSelection, entitySelection) => LampAt(world, blockSelection?.Position)?.Lit != true)
             });
     }
 
@@ -81,9 +80,10 @@ public class BlockLamp: BlockLiquidContainerBase
     public override string GetPlacedBlockInfo(IWorldAccessor world, BlockPos pos, IPlayer forPlayer)
     {
         var info = new StringBuilder();
-        if (Filled)
+        var lamp = LampAt(world, pos);
+        if (lamp?.Filled == true)
         {
-            info.AppendLine(Lang.Get(HasFuel ? "immersivelighting:lamp-filled-fuel" : "immersivelighting:lamp-filled") + " " + RemainingFuel + "L");
+            info.AppendLine(Lang.Get(lamp.HasFuel ? "immersivelighting:lamp-filled-fuel" : "immersivelighting:lamp-filled") + " " + lamp.RemainingFuel + "L");
         }
         return info.ToString();
     }
@@ -94,12 +94,12 @@ public class BlockLamp: BlockLiquidContainerBase
     #region Mesh generation
     
 
-        public MeshData GenMesh(ItemStack liquidContentStack, BlockPos forBlockPos = null)
+        public MeshData GenMesh(ItemStack liquidContentStack, BlockPos forBlockPos = null, bool lit = false)
         {
             ICoreClientAPI capi = api as ICoreClientAPI;
 
             
-            Shape shape = Vintagestory.API.Common.Shape.TryGet(capi, ShapesBasePath + "lamp" + ( Lit ? "-lit" : "") +  ".json");
+            Shape shape = Vintagestory.API.Common.Shape.TryGet(capi, ShapesBasePath + "lamp" + (lit ? "-lit" : "") +  ".json");
             
             MeshData barrelMesh;
             capi.Tesselator.TesselateShape(this, shape, out barrelMesh);

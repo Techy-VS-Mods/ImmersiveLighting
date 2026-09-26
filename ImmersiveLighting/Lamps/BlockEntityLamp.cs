@@ -31,6 +31,15 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     private float _fuelMultiplyer = 1;
     private double _remainingFuel = 0;
     private bool _meshChanged = true;
+    private bool _filledClient;
+
+    // Per-lamp state. Everything below belongs to THIS placed lamp; the Block object is shared by every lamp of the same
+    // variant, so state must never be stored on it (that made every lamp show the fuel level of the last one updated).
+    public bool HasFuel => _hasFuel;
+    public bool Lit => _lit;
+    public bool Filled => Api?.Side == EnumAppSide.Client ? _filledClient : !inventory[0].Empty;
+    public double RemainingFuel => _remainingFuel;
+    public int WickHeight => _wickHeight;
 
     // Per-position light, read off the main thread by BlockLamp.GetLightHsv during relight, so it is an immutable
     // array that is swapped atomically. null until the first RefreshLight: a chunk relight that runs before Initialize
@@ -82,21 +91,17 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
             CapacityLitres = _ownBlock.Attributes["capacityLitres"].AsInt(50);
             ((ItemSlotLiquidOnly)inventory[0]).CapacityLitres = CapacityLitres;
         }
-        if (_ownBlock?.Attributes?["filled"].Exists == true)
-        {
-            _ownBlock.Filled =  _ownBlock.Attributes["filled"].AsBool(false);
-        }
         if (_ownBlock?.Attributes?["lit"].Exists == true)
         {
-            _ownBlock.Lit = _lit = _ownBlock.Attributes["lit"].AsBool(false);
+            _lit = _ownBlock.Attributes["lit"].AsBool(false);
         }
         if (_ownBlock?.Attributes?["remainingFuel"].Exists == true)
         {
-            _ownBlock.RemainingFuel = _remainingFuel = _ownBlock.Attributes["remainingFuel"].AsDouble(0.0d);
+            _remainingFuel = _ownBlock.Attributes["remainingFuel"].AsDouble(0.0d);
         }
         if (_ownBlock?.Attributes?["wickHeight"].Exists == true)
         {
-            _ownBlock.WickHeight = _wickHeight = _ownBlock.Attributes["wickHeight"].AsInt(1);
+            _wickHeight = _ownBlock.Attributes["wickHeight"].AsInt(1);
         }
         if (Api?.Side == EnumAppSide.Client)
         {
@@ -252,12 +257,6 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
             var  newBlock = (BlockLamp) Api.World.GetBlock(Block.CodeWithParts(NewState.ToString()));
             
             // var  newBlock = (BlockLamp) Api.World.GetBlock(Block.CodeWithParts("off"));
-            newBlock.Lit = _lit;
-            newBlock.HasFuel = _hasFuel;
-            newBlock.Filled = !inventory[0].Empty;
-            newBlock.RemainingFuel = _remainingFuel;
-            newBlock.WickHeight = _wickHeight;
-            
             // newBlock.LightHsv = GetLightHsv();
             Api.World.BlockAccessor.ExchangeBlock(newBlock.BlockId, Pos);
             _ownBlock = newBlock;
@@ -312,10 +311,10 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
         base.FromTreeAttributes(tree, worldForResolving);
         if (Api?.Side == EnumAppSide.Client)
         {
-            ((BlockLamp)Block).HasFuel = _hasFuel = tree.GetBool("hasFuel");
-            ((BlockLamp)Block).Lit = _lit = tree.GetBool("lit");
-            ((BlockLamp)Block).Filled = tree.GetBool("filled");
-            ((BlockLamp)Block).RemainingFuel = _remainingFuel = tree.GetDouble("remainingFuel");
+            _hasFuel = tree.GetBool("hasFuel");
+            _lit = tree.GetBool("lit");
+            _filledClient = tree.GetBool("filled");
+            _remainingFuel = tree.GetDouble("remainingFuel");
             _wickHeight = (int)tree.GetDouble("wickHeight", _wickHeight);
 
             // The server's ExchangeBlock packet can be processed before this attribute update, so the client relight
@@ -346,7 +345,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     {
         if (_ownBlock == null) return null;
 
-        MeshData mesh = _ownBlock.GenMesh(inventory[0].Itemstack, Pos);
+        MeshData mesh = _ownBlock.GenMesh(inventory[0].Itemstack, Pos, _lit);
 
         if (mesh.CustomInts != null)
         {
