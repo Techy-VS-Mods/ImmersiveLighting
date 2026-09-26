@@ -1,0 +1,10 @@
+{
+  "type": "code",
+  "modid": "lamplighttest",
+  "name": "Lamp Light Test Harness",
+  "description": "Headless server-side harness: places the lamp, changes its state, reads block light levels, writes results, shuts the server down.",
+  "authors": ["compute-admin"],
+  "version": "0.1.0",
+  "side": "Server",
+  "dependencies": { "game": "1.22.0", "immersivelighting": "*" }
+}

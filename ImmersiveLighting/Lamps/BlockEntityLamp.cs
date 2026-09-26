@@ -1,8 +1,6 @@
 using System;
-using System.Linq;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
-using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
@@ -33,8 +31,16 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     private float _fuelMultiplyer = 1;
     private double _remainingFuel = 0;
     private bool _meshChanged = true;
-    private bool _lightChanged = true;
-    
+
+    // Per-position light, read off the main thread by BlockLamp.GetLightHsv during relight, so it is an immutable
+    // array that is swapped atomically. null until the first RefreshLight: a chunk relight that runs before Initialize
+    // then falls back to the variant's static light instead of reading a half-initialised entity.
+    private volatile byte[] _lightSnapshot;
+    public byte[] LightSnapshot => _lightSnapshot;
+
+    // Test hook only: skips RemoveBlockLight to reproduce "dimming leaves the old light behind".
+    public static bool DebugNaiveRelight;
+
     private BlockLampStates CurrentState
     {
         get
@@ -99,6 +105,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
         
         
         UpdateFuel(0, true);
+        UpdateBlock();
     }
 
     protected override ItemSlot GetAutoPushIntoSlot(BlockFacing atBlockFace, ItemSlot fromSlot)
@@ -127,9 +134,45 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
     private bool ToggleLightedState()
     {
         _lit = !_lit && _hasFuel;
-        _lightChanged = true;
-        MarkDirty(true);
+        RefreshLight();
         return true;
+    }
+
+    /// <summary>
+    /// Light for the lamp's current state, using the same brightness steps as the off/low/med/high variants
+    /// (V 0/5/10/20). The variants now only drive the mesh; light comes from this snapshot via BlockLamp.GetLightHsv.
+    /// </summary>
+    private byte[] ComputeHsv()
+    {
+        switch ((int)NewState)
+        {
+            case 1: return new byte[] { 4, 5, 5 };
+            case 2: return new byte[] { 4, 5, 10 };
+            case 3: return new byte[] { 4, 5, 20 };
+            default: return new byte[] { 0, 0, 0 };
+        }
+    }
+
+    /// <summary>
+    /// Forces a light recalculation when the lamp's light changes without the block id changing. The engine only
+    /// relights from queued block-change tasks, and an exchange reads the old and new light from the CURRENT state,
+    /// so dimming would leave the old light behind: the old contribution is removed first, then the block is
+    /// re-exchanged to enqueue the relight (same pattern as vanilla ground storage). Safe on both sides.
+    /// </summary>
+    public void RefreshLight()
+    {
+        if (Api == null || Pos == null) return;
+        var previous = _lightSnapshot ?? Block?.LightHsv ?? new byte[] { 0, 0, 0 };
+        var next = ComputeHsv();
+        if (_lightSnapshot != null && previous.AsSpan().SequenceEqual(next)) return;
+
+        var ba = Api.World.BlockAccessor;
+        if (!DebugNaiveRelight && previous.Length >= 3 && previous[2] > 0)
+        {
+            ba.RemoveBlockLight((byte[])previous.Clone(), Pos);
+        }
+        _lightSnapshot = next;
+        ba.ExchangeBlock(ba.GetBlock(Pos).Id, Pos);
     }
     
     public enum WickMotion
@@ -156,7 +199,7 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
             return true;
         }
         Api.Logger.Notification("Wick set to" + _wickHeight);
-        _lightChanged = true;
+        RefreshLight();
         MarkDirty(true);
         return true;
     }
@@ -167,10 +210,9 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
         _interactCooldown = false;
 
         if (Api?.Side == EnumAppSide.Client && _meshChanged) _currentMesh = GenMesh();
-        UpdateBlockLight();
 
         if (Api?.Side != EnumAppSide.Server) return;
-        UpdateBlockLight();
+        UpdateBlock();
         UpdateFuel(dt);
     }
 
@@ -191,75 +233,53 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
             else
             {
                 _hasFuel = false;
-                _lit = false;
-                _lightChanged = true;
+                _lit = false; 
             }
             
             _remainingFuel = CalculateRemainingFuel();
+            RefreshLight();
             _meshChanged = true;
             MarkDirty(true);
         }
     }
-    public int Index3D(int posX, int posY, int posZ)
-    {
-        
-        return (posY % GlobalConstants.ChunkSize * GlobalConstants.ChunkSize + posZ % GlobalConstants.ChunkSize) * GlobalConstants.ChunkSize + posX % GlobalConstants.ChunkSize;
-    } 
-    public void UpdateBlockLight()
+
+    public void UpdateBlock()
     {
         
         // Todo instead of using variants try setting lighthsv here before exchanging block
-        if (_lightChanged)
+        if (NewState != CurrentState)
         {
-            // var  newBlock = (BlockLamp) Api.World.GetBlock(Block.CodeWithParts(NewState.ToString()));
-            var ba = Api.World.GetBlockAccessorMapChunkLoading(true, true);
-            var chunk = ba.GetChunk(Pos.X / GlobalConstants.ChunkSize, Pos.InternalY / GlobalConstants.ChunkSize, Pos.Z / GlobalConstants.ChunkSize);
-            var pos = new Vec2i(Pos.X / GlobalConstants.ChunkSize, Pos.Z / GlobalConstants.ChunkSize);
-            ba.SetChunks(pos, new[] {chunk});
-            var newLightHsv = UpdateLightHsv();
-            _ownBlock.Lit = _lit;
-            _ownBlock.HasFuel = _hasFuel;
-            _ownBlock.Filled = !inventory[0].Empty;
-            _ownBlock.RemainingFuel = _remainingFuel;
-            _ownBlock.WickHeight = _wickHeight;
-            _ownBlock.LightAbsorption = _lit ? 0 : 1;
-            _ownBlock.LightHsv = newLightHsv;
-            var blockIndex3d = Index3D(Pos.X, Pos.Y, Pos.Z);
-            // var accessor = ImmersiveLightingModSystem.CoreServerApi.World.GetBlockAccessorMapChunkLoading(true, true);
+            var  newBlock = (BlockLamp) Api.World.GetBlock(Block.CodeWithParts(NewState.ToString()));
             
-            // chunk.Lighting.ClearLight();
+            // var  newBlock = (BlockLamp) Api.World.GetBlock(Block.CodeWithParts("off"));
+            newBlock.Lit = _lit;
+            newBlock.HasFuel = _hasFuel;
+            newBlock.Filled = !inventory[0].Empty;
+            newBlock.RemainingFuel = _remainingFuel;
+            newBlock.WickHeight = _wickHeight;
             
-            ba.ExchangeBlock(_ownBlock.BlockId, Pos);
-            
-            chunk.Lighting.SetBlocklight(blockIndex3d, newLightHsv[2]);
-            
-            ba.Commit();
-            // ba.GetChunk(Pos.X, Pos.Y, Pos.Z).Lighting.ClearLight();
-            _ownBlock = _ownBlock;
+            // newBlock.LightHsv = GetLightHsv();
+            Api.World.BlockAccessor.ExchangeBlock(newBlock.BlockId, Pos);
+            _ownBlock = newBlock;
             _meshChanged = false;
-            _lightChanged = false;
-            MarkDirty(true);
         }
     }
     
-    private byte[] UpdateLightHsv()
-    {
-        byte[] lightHsv = { 0, 0, 0 };
-
-        if (!inventory[0].Empty)
-        {
-            // ReSharper disable once PossibleLossOfFraction
-            var colortemp = (byte)GameMath.Clamp(Math.Round((double)inventory[0].Itemstack.Item.CombustibleProps.BurnTemperature / 100), 3, 11);
-            // 4-10
-        
-            if (_lit)
-            {
-                lightHsv = new byte[] { colortemp, 5, (byte)(5 * _wickHeight + 1) };
-            }    
-        }
-
-        return lightHsv;
-    }
+    // private byte[] GetLightHsv()
+    // {
+    //     byte[] lightHsv = { 0, 0, 0 };
+    //
+    //     // ReSharper disable once PossibleLossOfFraction
+    //     var colortemp = (byte)GameMath.Clamp(Math.Round((double)inventory[0].Itemstack.Item.CombustibleProps.BurnTemperature / 100), 3, 11);
+    //     // 4-10
+    //     
+    //     if (lit)
+    //     {
+    //         lightHsv = new byte[] { colortemp, 5, (byte)(5 * wickHeight + 1) };
+    //     }
+    //     
+    //     return lightHsv;
+    // }
     
     
     public override void ToTreeAttributes(ITreeAttribute tree)
@@ -272,7 +292,6 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
              tree.SetBool("filled", !inventory[0].Empty);
              tree.SetDouble("remainingFuel", _remainingFuel);
              tree.SetDouble("wickHeight", _wickHeight);
-             tree.SetBool("lightChanged", _lightChanged);
         }
     }
 
@@ -297,8 +316,12 @@ public class BlockEntityLamp : BlockEntityLiquidContainer
             ((BlockLamp)Block).Lit = _lit = tree.GetBool("lit");
             ((BlockLamp)Block).Filled = tree.GetBool("filled");
             ((BlockLamp)Block).RemainingFuel = _remainingFuel = tree.GetDouble("remainingFuel");
-            _lightChanged = tree.GetBool("lightChanged", true);
-            
+            _wickHeight = (int)tree.GetDouble("wickHeight", _wickHeight);
+
+            // The server's ExchangeBlock packet can be processed before this attribute update, so the client relight
+            // would read stale state. Refresh from the freshly received state here.
+            RefreshLight();
+
             _currentMesh = GenMesh();
             MarkDirty(true);
         }

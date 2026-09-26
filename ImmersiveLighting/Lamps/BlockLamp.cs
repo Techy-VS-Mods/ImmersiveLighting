@@ -15,6 +15,18 @@ public class BlockLamp: BlockLiquidContainerBase
 {
     protected string ShapesBasePath => "immersivelighting:" + "shapes/block/lamps/";
     
+    // Light comes from the block entity's snapshot (see BlockEntityLamp.RefreshLight). The relight thread calls this
+    // for both the old and new block, so it only reads the immutable snapshot and tolerates a missing entity.
+    public override byte[] GetLightHsv(IBlockAccessor blockAccessor, BlockPos pos, ItemStack stack = null)
+    {
+        if (blockAccessor != null && pos != null)
+        {
+            var snapshot = (blockAccessor.GetBlockEntity(pos) as BlockEntityLamp)?.LightSnapshot;
+            if (snapshot != null) return snapshot;
+        }
+        return base.GetLightHsv(blockAccessor, pos, stack);
+    }
+
     public override int GetContainerSlotId(BlockPos pos) => 0;
 
     public override int GetContainerSlotId(ItemStack containerStack) => 0;
