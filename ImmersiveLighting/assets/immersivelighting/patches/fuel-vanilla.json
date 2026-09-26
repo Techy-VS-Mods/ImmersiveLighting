@@ -1,0 +1,19 @@
+[
+  {
+    "comment": "Vanilla oils. Thicker than spirits, so the wick draws them more slowly: olive ~2.5x and linseed (flax) ~2.25x the burn time of aqua vitae. Fat variants are skipped by the base game, so only these two exist.",
+    "file": "game:itemtypes/liquid/oilportion",
+    "op": "add",
+    "path": "/combustiblePropsByType",
+    "value": {
+      "*-olive": { "burnTemperature": 900, "burnDuration": 2.5 },
+      "*-flax": { "burnTemperature": 850, "burnDuration": 2.25 }
+    }
+  },
+  {
+    "comment": "Plain spirit: same draw as aqua vitae, a little cooler and dimmer.",
+    "file": "game:itemtypes/liquid/spirit",
+    "op": "add",
+    "path": "/combustibleProps",
+    "value": { "burnTemperature": 1000, "burnDuration": 1 }
+  }
+]

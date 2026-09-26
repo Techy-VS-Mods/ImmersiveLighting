@@ -1,0 +1,10 @@
+[
+  {
+    "comment": "Ghee (Dairy Plus): clarified butter, the classic diya fuel. Burns 3x as long as aqua vitae.",
+    "file": "dairyplus:itemtypes/liquid/ghee",
+    "op": "add",
+    "path": "/combustibleProps",
+    "value": { "burnTemperature": 800, "burnDuration": 3 },
+    "dependsOn": [ { "modid": "dairyplus" } ]
+  }
+]

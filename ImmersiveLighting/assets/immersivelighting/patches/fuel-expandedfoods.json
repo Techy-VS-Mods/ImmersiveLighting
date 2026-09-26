@@ -1,0 +1,41 @@
+[
+  {
+    "comment": "Expanded Foods cooking oils. Fine oil (olive) 2.5x, seed and nut oils 2.25x, the aqua vitae burn time.",
+    "file": "expandedfoods:itemtypes/liquid/foodoil",
+    "op": "add",
+    "path": "/combustiblePropsByType",
+    "value": {
+      "*-olive":     { "burnTemperature": 900, "burnDuration": 2.5 },
+      "*-flax":      { "burnTemperature": 850, "burnDuration": 2.25 },
+      "*-sunflower": { "burnTemperature": 850, "burnDuration": 2.25 },
+      "*-peanut":    { "burnTemperature": 850, "burnDuration": 2.25 },
+      "*-soy":       { "burnTemperature": 850, "burnDuration": 2.25 },
+      "*-rice":      { "burnTemperature": 850, "burnDuration": 2.25 },
+      "*-seed":      { "burnTemperature": 850, "burnDuration": 2.25 }
+    },
+    "dependsOn": [ { "modid": "expandedfoods" } ]
+  },
+  {
+    "comment": "Liquid lard: thick, cool, smoky flame; burns 3x as long as aqua vitae.",
+    "file": "expandedfoods:itemtypes/liquid/lard",
+    "op": "add",
+    "path": "/combustibleProps",
+    "value": { "burnTemperature": 750, "burnDuration": 3 },
+    "dependsOn": [ { "modid": "expandedfoods" } ]
+  },
+  {
+    "comment": "Distilled spirits: the strongest burn hottest. Same draw as aqua vitae.",
+    "file": "expandedfoods:itemtypes/liquid/strongspiritportion",
+    "op": "add",
+    "path": "/combustibleProps",
+    "value": { "burnTemperature": 1050, "burnDuration": 1 },
+    "dependsOn": [ { "modid": "expandedfoods" } ]
+  },
+  {
+    "file": "expandedfoods:itemtypes/liquid/potentspiritportion",
+    "op": "add",
+    "path": "/combustibleProps",
+    "value": { "burnTemperature": 1100, "burnDuration": 1 },
+    "dependsOn": [ { "modid": "expandedfoods" } ]
+  }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "comment": "Biodiversity orchard oils (avocado, engkala): fine oils, same as olive.",
+    "file": "bdorchard:itemtypes/liquid/oilportion",
+    "op": "add",
+    "path": "/combustiblePropsByType",
+    "value": {
+      "*-avocado": { "burnTemperature": 900, "burnDuration": 2.5 },
+      "*-engkala": { "burnTemperature": 900, "burnDuration": 2.5 }
+    },
+    "dependsOn": [ { "modid": "bdorchard" } ]
+  },
+  {
+    "comment": "Fruit and potato spirits.",
+    "file": "bdorchard:itemtypes/liquid/spirit",
+    "op": "add",
+    "path": "/combustibleProps",
+    "value": { "burnTemperature": 1000, "burnDuration": 1 },
+    "dependsOn": [ { "modid": "bdorchard" } ]
+  },
+  {
+    "file": "bdcrop:itemtypes/liquid/spirit",
+    "op": "add",
+    "path": "/combustibleProps",
+    "value": { "burnTemperature": 1000, "burnDuration": 1 },
+    "dependsOn": [ { "modid": "bdcrop" } ]
+  }
+]

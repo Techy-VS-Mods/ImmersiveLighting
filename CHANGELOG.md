@@ -7,7 +7,13 @@
   position. Two lamps with different fuel now each show their own level.
 - Behaviour change for add-ons: `BlockLamp` no longer has the `HasFuel`, `Lit`, `Filled`, `RemainingFuel` and `WickHeight`
   fields. Read them from `BlockEntityLamp` instead (they are now read-only properties there).
-- Added a regression test (two lamps with different fuel) to the headless test harness.
+- **More fuels.** The lamp now burns more than aqua vitae. Compatibility patches (each gated with `dependsOn`, so they only apply
+  when the mod is installed) add burn properties to true liquid fuels: base-game olive and flax oil and spirit, Expanded Foods
+  cooking oils, lard and strong/potent spirits, Dairy Plus ghee, and Biodiversity avocado/engkala oil and fruit/potato spirits.
+- **Rebalanced burn times and flame temperatures.** Aqua vitae is now 1100 (was 700) at the same 50 min per litre baseline.
+  Other spirits burn as fast, oils 2.25-2.5x as long, ghee and lard 3x as long, with cooler flames for thicker fuels.
+- Added tests to the headless harness: a two-lamp regression check, and a fuel check that every installed liquid fuel variant
+  has burn properties and is accepted by the lamp (120 of 120 pass with all compat mods installed; no patch errors either way).
 
 ## 1.0.3
 - Updated for Vintage Story 1.22.x (.NET 10).

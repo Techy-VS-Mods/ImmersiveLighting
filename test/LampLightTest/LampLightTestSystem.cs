@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
@@ -21,7 +22,7 @@ namespace LampLightTest
         BlockPos P, Q, R, T1;
         BlockEntityLamp lamp, lamp2;
         BlockPos S;
-        bool instancingOk = true;
+        bool instancingOk = true, fuelsOk = true;
 
         public override bool ShouldLoad(EnumAppSide forSide) => forSide == EnumAppSide.Server;
 
@@ -89,6 +90,9 @@ namespace LampLightTest
             steps.Add(("L6 read", 0, () => Snap("L6 fuel removed (should go dark)")));
             steps.Add(("L6b wait more", 5000, () => { }));
             steps.Add(("L6b read", 0, () => Snap("L6b 5s later")));
+            // ---- fuel compat: every liquid fuel from a mod that IS installed must carry burn properties and be accepted by the lamp
+            steps.Add(("F1 fuel compat", 1500, () => CheckFuels()));
+
             // ---- regression: two placed lamps must each report their OWN fuel (BlockLamp is shared by every lamp of a variant)
             steps.Add(("S1 place second lamp, different fuel", 1500, () =>
             {
@@ -101,8 +105,47 @@ namespace LampLightTest
             steps.Add(("S1 read", 1500, () => CheckInstancing()));
             steps.Add(("S2 change lamp B only", 1500, () => { lamp2.Inventory[0].Itemstack = new ItemStack(fuel, 70); lamp2.Inventory[0].MarkDirty(); }));
             steps.Add(("S2 read", 1500, () => CheckInstancing()));
-            steps.Add(("done", 0, () => Finish(instancingOk ? "OK" : "FAIL: lamps share state (instancing bug)")));
+            steps.Add(("done", 0, () => Finish(!instancingOk ? "FAIL: lamps share state (instancing bug)" : !fuelsOk ? "FAIL: fuel compat" : "OK")));
             Next();
+        }
+
+        // A trailing * means "every variant with that prefix"; every variant of every installed fuel must pass.
+        static readonly string[] FuelCodes =
+        {
+            "game:alcoholportion", "game:spiritportion*", "game:oilportion-*",
+            "expandedfoods:foodoilportion-*", "expandedfoods:lard", "expandedfoods:strongspiritportion-*", "expandedfoods:potentspiritportion-*",
+            "dairyplus:ghee", "bdorchard:oilportion-*", "bdorchard:spiritportion-*", "bdcrop:spiritportion-*"
+        };
+
+        IEnumerable<Item> ResolveFuel(string code)
+        {
+            if (!code.EndsWith("*")) { var one = sapi.World.GetItem(new AssetLocation(code)); return one == null ? new Item[0] : new[] { one }; }
+            var prefix = code.TrimEnd('*');
+            return sapi.World.Items.Where(i => i?.Code != null && i.Code.ToString().StartsWith(prefix)).ToList();
+        }
+
+        void CheckFuels()
+        {
+            int present = 0, good = 0, absentCodes = 0;
+            foreach (var code in FuelCodes)
+            {
+                var items = ResolveFuel(code).ToList();
+                if (items.Count == 0) { absentCodes++; log.AppendLine(string.Format("FUEL {0,-44} absent (mod not installed)", code)); continue; }
+                foreach (var item in items)
+                {
+                    present++;
+                    var cp = item.CombustibleProps;
+                    lamp.Inventory[0].Itemstack = new ItemStack(item, 10); lamp.Inventory[0].MarkDirty();
+                    bool accepted = lamp.Inventory[0].Itemstack != null;
+                    bool ok = cp != null && accepted && lamp.HasFuel;
+                    if (ok) good++; else fuelsOk = false;
+                    var line = string.Format("FUEL {0,-48} temp={1,5} dur={2,4} (~{3,3:0} min/L at wick 1) accepted={4} hasFuel={5} => {6}",
+                        item.Code, cp?.BurnTemperature, cp?.BurnDuration, (cp?.BurnDuration ?? 0) * 50, accepted, lamp.HasFuel, ok ? "PASS" : "FAIL");
+                    log.AppendLine(line); sapi.Logger.Notification("[LampTest] " + line);
+                    lamp.Inventory[0].Itemstack = null; lamp.Inventory[0].MarkDirty();
+                }
+            }
+            log.AppendLine(string.Format("FUELCHECK {0} of {1} installed fuel variants OK ({2} fuel families absent)", good, present, absentCodes));
         }
 
         void CheckInstancing()

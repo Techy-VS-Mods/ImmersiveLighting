@@ -1,9 +1,9 @@
-[{
-  "file": "game:itemtypes/liquid/alcohol",
-  "op": "add",
-  "path": "/combustibleProps",
-  "value": {
-    "burnTemperature": 700,
-    "burnDuration": 1
-  } 
-}]
+[
+  {
+    "comment": "Aqua vitae (game:alcoholportion): thin, volatile, clean-burning. Baseline fuel: one portion every 30 s at wick 1, so a litre lasts about 50 minutes.",
+    "file": "game:itemtypes/liquid/alcohol",
+    "op": "add",
+    "path": "/combustibleProps",
+    "value": { "burnTemperature": 1100, "burnDuration": 1 }
+  }
+]
