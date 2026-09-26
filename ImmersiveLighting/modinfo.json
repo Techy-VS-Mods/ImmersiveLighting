@@ -6,7 +6,7 @@
         "Techy"
     ],
     "description": "An attempt to make more immersive lighting sources for Vintage Story. ",
-    "version": "1.3.0",
+    "version": "1.3.0-rc.1",
     "dependencies": {
         "game": "1.22.0"
     }

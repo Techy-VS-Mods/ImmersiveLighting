@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.3.0
+## 1.3.0-rc.1 (release candidate)
 - **Lamp readout.** Looking at a lamp shows its fuel, flame colour and smoke, and how long the fuel will last at the current
   wick ("Burning: about 50 min of fuel left at this wick").
 - **Lighting needs an ignition source.** A lamp is now lit with a firestarter or a lit torch (the game's own ignition system, so
